@@ -9,61 +9,134 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppScenariosRouteImport } from './routes/_app/scenarios'
+import { Route as AppMonthlyRouteImport } from './routes/_app/monthly'
+import { Route as AppBudgetRouteImport } from './routes/_app/budget'
 
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any)
+const AppScenariosRoute = AppScenariosRouteImport.update({
+  id: '/scenarios',
+  path: '/scenarios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMonthlyRoute = AppMonthlyRouteImport.update({
+  id: '/monthly',
+  path: '/monthly',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBudgetRoute = AppBudgetRouteImport.update({
+  id: '/budget',
+  path: '/budget',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/budget': typeof AppBudgetRoute
+  '/monthly': typeof AppMonthlyRoute
+  '/scenarios': typeof AppScenariosRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/budget': typeof AppBudgetRoute
+  '/monthly': typeof AppMonthlyRoute
+  '/scenarios': typeof AppScenariosRoute
+  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/budget': typeof AppBudgetRoute
+  '/_app/monthly': typeof AppMonthlyRoute
+  '/_app/scenarios': typeof AppScenariosRoute
+  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/budget' | '/monthly' | '/scenarios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/budget' | '/monthly' | '/scenarios' | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/budget'
+    | '/_app/monthly'
+    | '/_app/scenarios'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/scenarios': {
+      id: '/_app/scenarios'
+      path: '/scenarios'
+      fullPath: '/scenarios'
+      preLoaderRoute: typeof AppScenariosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/monthly': {
+      id: '/_app/monthly'
+      path: '/monthly'
+      fullPath: '/monthly'
+      preLoaderRoute: typeof AppMonthlyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/budget': {
+      id: '/_app/budget'
+      path: '/budget'
+      fullPath: '/budget'
+      preLoaderRoute: typeof AppBudgetRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppBudgetRoute: typeof AppBudgetRoute
+  AppMonthlyRoute: typeof AppMonthlyRoute
+  AppScenariosRoute: typeof AppScenariosRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppBudgetRoute: AppBudgetRoute,
+  AppMonthlyRoute: AppMonthlyRoute,
+  AppScenariosRoute: AppScenariosRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
