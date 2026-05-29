@@ -5,7 +5,7 @@ import { compute } from "@/lib/budget/engine";
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { fmtSEK, fmtNum, MONTHS } from "@/lib/budget/format";
 
-export const Route = createFileRoute("/_app/budget/monthly")({
+export const Route = createFileRoute("/_app/monthly")({
   head: () => ({
     meta: [
       { title: "Monthly grid — Nordenergi Budget" },

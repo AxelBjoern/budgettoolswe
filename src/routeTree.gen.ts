@@ -12,8 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppScenariosRouteImport } from './routes/_app/scenarios'
+import { Route as AppMonthlyRouteImport } from './routes/_app/monthly'
 import { Route as AppBudgetRouteImport } from './routes/_app/budget'
-import { Route as AppBudgetMonthlyRouteImport } from './routes/_app/budget.monthly'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -29,49 +29,49 @@ const AppScenariosRoute = AppScenariosRouteImport.update({
   path: '/scenarios',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMonthlyRoute = AppMonthlyRouteImport.update({
+  id: '/monthly',
+  path: '/monthly',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBudgetRoute = AppBudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
   getParentRoute: () => AppRoute,
 } as any)
-const AppBudgetMonthlyRoute = AppBudgetMonthlyRouteImport.update({
-  id: '/monthly',
-  path: '/monthly',
-  getParentRoute: () => AppBudgetRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/budget': typeof AppBudgetRouteWithChildren
+  '/budget': typeof AppBudgetRoute
+  '/monthly': typeof AppMonthlyRoute
   '/scenarios': typeof AppScenariosRoute
-  '/budget/monthly': typeof AppBudgetMonthlyRoute
 }
 export interface FileRoutesByTo {
-  '/budget': typeof AppBudgetRouteWithChildren
+  '/budget': typeof AppBudgetRoute
+  '/monthly': typeof AppMonthlyRoute
   '/scenarios': typeof AppScenariosRoute
   '/': typeof AppIndexRoute
-  '/budget/monthly': typeof AppBudgetMonthlyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/_app/budget': typeof AppBudgetRouteWithChildren
+  '/_app/budget': typeof AppBudgetRoute
+  '/_app/monthly': typeof AppMonthlyRoute
   '/_app/scenarios': typeof AppScenariosRoute
   '/_app/': typeof AppIndexRoute
-  '/_app/budget/monthly': typeof AppBudgetMonthlyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/budget' | '/scenarios' | '/budget/monthly'
+  fullPaths: '/' | '/budget' | '/monthly' | '/scenarios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/budget' | '/scenarios' | '/' | '/budget/monthly'
+  to: '/budget' | '/monthly' | '/scenarios' | '/'
   id:
     | '__root__'
     | '/_app'
     | '/_app/budget'
+    | '/_app/monthly'
     | '/_app/scenarios'
     | '/_app/'
-    | '/_app/budget/monthly'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -101,6 +101,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppScenariosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/monthly': {
+      id: '/_app/monthly'
+      path: '/monthly'
+      fullPath: '/monthly'
+      preLoaderRoute: typeof AppMonthlyRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/budget': {
       id: '/_app/budget'
       path: '/budget'
@@ -108,36 +115,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBudgetRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/budget/monthly': {
-      id: '/_app/budget/monthly'
-      path: '/monthly'
-      fullPath: '/budget/monthly'
-      preLoaderRoute: typeof AppBudgetMonthlyRouteImport
-      parentRoute: typeof AppBudgetRoute
-    }
   }
 }
 
-interface AppBudgetRouteChildren {
-  AppBudgetMonthlyRoute: typeof AppBudgetMonthlyRoute
-}
-
-const AppBudgetRouteChildren: AppBudgetRouteChildren = {
-  AppBudgetMonthlyRoute: AppBudgetMonthlyRoute,
-}
-
-const AppBudgetRouteWithChildren = AppBudgetRoute._addFileChildren(
-  AppBudgetRouteChildren,
-)
-
 interface AppRouteChildren {
-  AppBudgetRoute: typeof AppBudgetRouteWithChildren
+  AppBudgetRoute: typeof AppBudgetRoute
+  AppMonthlyRoute: typeof AppMonthlyRoute
   AppScenariosRoute: typeof AppScenariosRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppBudgetRoute: AppBudgetRouteWithChildren,
+  AppBudgetRoute: AppBudgetRoute,
+  AppMonthlyRoute: AppMonthlyRoute,
   AppScenariosRoute: AppScenariosRoute,
   AppIndexRoute: AppIndexRoute,
 }
