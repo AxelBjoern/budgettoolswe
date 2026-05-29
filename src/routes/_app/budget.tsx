@@ -68,7 +68,7 @@ function BudgetTool() {
       <SectionHeader
         title="Budget assumptions"
         subtitle={`Scenario · ${scenario.name}`}
-        right={
+      right={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={exportJson} className="h-8 rounded-sm">
               <Download className="mr-1 h-3.5 w-3.5" />
@@ -84,6 +84,39 @@ function BudgetTool() {
             >
               <RotateCcw className="mr-1 h-3.5 w-3.5" />
               Reset
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (!confirm("Set every numeric assumption to 1 across all years?")) return;
+                const one: typeof ya = {
+                  newCustomersByChannel: Object.fromEntries(CHANNELS.map((c) => [c.key, 1])) as Record<ChannelKey, number>,
+                  churnRate: 1,
+                  acquisitionCostPerCustomer: 1,
+                  kwhPerCustomerYear: 1,
+                  subscriptionPerCustomerYear: 1,
+                  pricePerKwh: 1,
+                  costPerKwh: 1,
+                  certificateCostPerKwh: 1,
+                  surchargePct: 1,
+                  extraServicesPerCustomerYear: 1,
+                  otherExternalExpenses: 1,
+                  socialFeesPct: 1,
+                  loanInterest: 1,
+                  invoicingCostPerCustomer: 1,
+                  salaries: ya.salaries.map((r) => ({ ...r, title: r.title, count: 1, monthlySalary: 1 })),
+                  priceAreaShare: { SE1: 1, SE2: 1, SE3: 1, SE4: 1 },
+                  startingCustomers: 1,
+                };
+                for (let i = 0; i < scenario.assumptions.perYear.length; i++) {
+                  updateYear(scenario.id, i, one);
+                }
+              }}
+              className="h-8 rounded-sm"
+            >
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              All to 1
             </Button>
           </div>
         }
