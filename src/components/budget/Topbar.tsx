@@ -13,7 +13,7 @@ import { LayoutDashboard, Sliders, CalendarRange, GitCompare } from "lucide-reac
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/budget", label: "Budget", icon: Sliders },
-  { to: "/budget/monthly", label: "Monthly", icon: CalendarRange },
+  { to: "/monthly", label: "Monthly", icon: CalendarRange },
   { to: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;
 
