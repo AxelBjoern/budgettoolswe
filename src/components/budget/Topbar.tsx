@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { useBudgetStore } from "@/lib/budget/store";
+import { useActiveScenario, useBudgetStore } from "@/lib/budget/store";
 import {
   Select,
   SelectContent,
@@ -8,12 +8,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Sliders, CalendarRange, GitCompare } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  LayoutDashboard,
+  Sliders,
+  CalendarRange,
+  GitCompare,
+  ClipboardList,
+} from "lucide-react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/budget", label: "Budget", icon: Sliders },
   { to: "/monthly", label: "Monthly", icon: CalendarRange },
+  { to: "/results", label: "Results", icon: ClipboardList },
   { to: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;
 
@@ -26,6 +34,10 @@ export function Topbar() {
   const setYear = useBudgetStore((s) => s.setSelectedYear);
   const density = useBudgetStore((s) => s.density);
   const setDensity = useBudgetStore((s) => s.setDensity);
+  const updateAssumptions = useBudgetStore((s) => s.updateAssumptions);
+  const setContractStartDate = useBudgetStore((s) => s.setContractStartDate);
+  const scenario = useActiveScenario();
+  const appr = scenario.assumptions.salesAppreciationPct ?? 0;
 
   return (
     <header className="border-b border-border bg-card/60 backdrop-blur">
@@ -65,7 +77,38 @@ export function Topbar() {
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Contract start
+            </span>
+            <Input
+              type="date"
+              value={scenario.contractStartDate ?? ""}
+              onChange={(e) =>
+                setContractStartDate(scenario.id, e.target.value || undefined)
+              }
+              className="h-8 w-[140px] rounded-sm border-border bg-background text-xs"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Apprec. %/yr
+            </span>
+            <Input
+              type="number"
+              step={0.5}
+              value={(appr * 100).toFixed(2)}
+              onChange={(e) =>
+                updateAssumptions(scenario.id, {
+                  salesAppreciationPct: Number(e.target.value) / 100,
+                })
+              }
+              className="h-8 w-[70px] rounded-sm border-border bg-background text-right text-xs tabular-nums"
+            />
+          </div>
+
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Year

@@ -34,6 +34,14 @@ export interface SalaryRole {
   title: string;
   count: number;
   monthlySalary: number; // SEK / month / person
+  /** First active year (e.g. 2026). Undefined = active from scenario start. */
+  startYear?: number;
+  /** First active month 1..12. Defaults to 1. */
+  startMonth?: number;
+  /** Last active year. Undefined = never ends. */
+  endYear?: number;
+  /** Last active month 1..12. Defaults to 12. */
+  endMonth?: number;
 }
 
 export interface YearAssumptions {
@@ -75,6 +83,8 @@ export interface YearAssumptions {
   priceAreaPricing?: Record<PriceAreaKey, AreaPricing>;
   /** When true and priceAreaPricing is set, engine uses per-area pricing instead of global pricePerKwh/costPerKwh/certificateCostPerKwh. */
   useAreaPricing?: boolean;
+  /** First month (1..12) within this year that new customers are acquired. Defaults to 1. */
+  salesStartMonth?: number;
 }
 
 export interface Assumptions {
@@ -86,6 +96,8 @@ export interface Assumptions {
   perYear: YearAssumptions[];
   /** VAT rate (0..1) */
   vatRate: number;
+  /** Yearly sales appreciation rate (0..1). Applied to sell-side prices, subscriptions, extra services. */
+  salesAppreciationPct?: number;
 }
 
 export interface MonthlyRow {
@@ -161,4 +173,22 @@ export interface Scenario {
   name: string;
   createdAt: number;
   assumptions: Assumptions;
+  /** Actual reported monthly numbers. */
+  actuals?: Actuals;
+  /** Optional contract anchor date (ISO YYYY-MM-DD). Display only. */
+  contractStartDate?: string;
 }
+
+export interface ActualMonth {
+  year: number;
+  month: number; // 1..12
+  customers?: number;
+  totalIncome?: number;
+  totalCost?: number;
+  volumeByArea?: Partial<Record<PriceAreaKey, number>>;
+}
+
+export interface Actuals {
+  rows: ActualMonth[];
+}
+

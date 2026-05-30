@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Assumptions, Scenario } from "./types";
+import type { ActualMonth, Assumptions, Scenario } from "./types";
 import { SEED_ASSUMPTIONS } from "./seed";
 
 interface BudgetState {
@@ -20,6 +20,9 @@ interface BudgetState {
   deleteScenario: (id: string) => void;
   renameScenario: (id: string, name: string) => void;
   resetActive: () => void;
+  setActual: (id: string, year: number, month: number, patch: Partial<ActualMonth>) => void;
+  clearActuals: (id: string, year?: number) => void;
+  setContractStartDate: (id: string, date: string | undefined) => void;
 }
 
 const baseScenario = (name: string, a?: Assumptions): Scenario => ({
@@ -27,6 +30,7 @@ const baseScenario = (name: string, a?: Assumptions): Scenario => ({
   name,
   createdAt: Date.now(),
   assumptions: a ? structuredClone(a) : structuredClone(SEED_ASSUMPTIONS),
+  actuals: { rows: [] },
 });
 
 const initialBase = baseScenario("Base");
@@ -95,8 +99,40 @@ export const useBudgetStore = create<BudgetState>()(
               : sc,
           ),
         })),
+
+      setActual: (id, year, month, patch) =>
+        set((s) => ({
+          scenarios: s.scenarios.map((sc) => {
+            if (sc.id !== id) return sc;
+            const rows = sc.actuals?.rows ?? [];
+            const idx = rows.findIndex((r) => r.year === year && r.month === month);
+            const next = idx >= 0
+              ? rows.map((r, i) => (i === idx ? { ...r, ...patch, year, month } : r))
+              : [...rows, { year, month, ...patch }];
+            return { ...sc, actuals: { rows: next } };
+          }),
+        })),
+
+      clearActuals: (id, year) =>
+        set((s) => ({
+          scenarios: s.scenarios.map((sc) => {
+            if (sc.id !== id) return sc;
+            if (year == null) return { ...sc, actuals: { rows: [] } };
+            return {
+              ...sc,
+              actuals: { rows: (sc.actuals?.rows ?? []).filter((r) => r.year !== year) },
+            };
+          }),
+        })),
+
+      setContractStartDate: (id, date) =>
+        set((s) => ({
+          scenarios: s.scenarios.map((sc) =>
+            sc.id === id ? { ...sc, contractStartDate: date } : sc,
+          ),
+        })),
     }),
-    { name: "budget-store-v1" },
+    { name: "budget-store-v2" },
   ),
 );
 
