@@ -397,8 +397,8 @@ function slideHeader(
     x: 0.6, y: 1.0, w: 12, h: 0.3,
     color: muted, fontFace: "Arial", fontSize: 11, charSpacing: 4,
   });
-  slide.addShape("line" as PptxGenJS.SHAPE_NAME, {
-    x: 0.6, y: 1.35, w: 12, h: 0, line: { color: "E2E8F0", width: 1 },
+  slide.addShape("rect", {
+    x: 0.6, y: 1.35, w: 12, h: 0.02, fill: { color: "E2E8F0" }, line: { color: "E2E8F0", width: 0 },
   });
 }
 
