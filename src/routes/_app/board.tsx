@@ -136,7 +136,7 @@ function BoardPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-9 print-break-avoid">
         <KpiCard label="Horizon revenue" value={fmtSEK(horizon.revenue, { compact: true })} />
         <KpiCard
           label="Horizon EBITDA"
@@ -149,14 +149,57 @@ function BoardPage() {
           tone={margin >= 0 ? "positive" : "negative"}
         />
         <KpiCard
+          label="Cumulative CFO"
+          value={fmtSEK(horizon.cumulativeCFO, { compact: true })}
+          tone={horizon.cumulativeCFO >= 0 ? "positive" : "negative"}
+        />
+        <KpiCard
+          label="Ending cash"
+          value={fmtSEK(horizon.endingCash, { compact: true })}
+          tone={horizon.endingCash >= 0 ? "positive" : "negative"}
+        />
+        <KpiCard label="Ending customers" value={fmtNum(horizon.endCustomers)} />
+        <KpiCard label="Stream revenue" value={fmtSEK(horizon.streamRev, { compact: true })} />
+        <KpiCard label="Financing out." value={fmtSEK(horizon.financingOut, { compact: true })} />
+        <KpiCard
           label="Horizon cash flow"
           value={fmtSEK(horizon.cash, { compact: true })}
           tone={horizon.cash >= 0 ? "positive" : "negative"}
         />
-        <KpiCard label="Ending customers" value={fmtNum(horizon.endCustomers)} />
-        <KpiCard label="Stream revenue" value={fmtSEK(horizon.streamRev, { compact: true })} />
-        <KpiCard label="Financing outstanding" value={fmtSEK(horizon.financingOut, { compact: true })} />
       </div>
+
+      <section className="rounded-sm border border-border bg-card/40 p-4 print-break-avoid">
+        <div className="mb-3 flex items-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-[hsl(var(--accent))]" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Key risks & sensitivities · ±10% on horizon EBITDA
+          </h3>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {topRisks.map((r) => (
+            <div key={r.key} className="rounded-sm border border-border bg-background/60 p-3">
+              <div className="flex items-baseline justify-between">
+                <div className="text-sm font-semibold">{r.label}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {r.group}
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between text-xs tabular-nums">
+                <span className="num-neg">−{fmtSEK(Math.abs(r.lowDelta), { compact: true })}</span>
+                <span className="text-muted-foreground">spread</span>
+                <span className="text-[hsl(var(--success,142_70%_35%))]">
+                  +{fmtSEK(Math.abs(r.highDelta), { compact: true })}
+                </span>
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                Total swing {fmtSEK(r.spread, { compact: true })} ·{" "}
+                {fmtPct(sensitivity.baseEbitda !== 0 ? r.spread / Math.abs(sensitivity.baseEbitda) : 0)} of base
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
       <section className="grid gap-6 lg:grid-cols-2">
         <ChartFrame title={`EBITDA bridge · ${bridgeYear.year}`}>
