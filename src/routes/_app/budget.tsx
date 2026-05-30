@@ -137,7 +137,7 @@ function BudgetTool() {
               className="h-8 rounded-sm"
             >
               <RotateCcw className="mr-1 h-3.5 w-3.5" />
-              All to 1
+              All to 0
             </Button>
             <SyncFromEnergyDialog
               scenarioId={scenario.id}
