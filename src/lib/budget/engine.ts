@@ -80,6 +80,12 @@ export function compute(a: Assumptions): ComputedModel {
     saas: a.perYear[0].streams?.saas?.startingUnits ?? 0,
   };
 
+  const financing = buildFinancing(a);
+  const finByKey = new Map<string, ReturnType<typeof buildFinancing>["monthly"][number]>();
+  for (const r of financing.monthly) finByKey.set(`${r.year}-${r.month}`, r);
+
+
+
 
   for (let y = 0; y < a.years; y++) {
     const ya = a.perYear[y];
