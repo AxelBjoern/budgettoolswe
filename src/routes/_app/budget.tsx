@@ -276,6 +276,8 @@ function BudgetTool() {
                     <th className="px-3 py-2 text-left">Role</th>
                     <th className="px-3 py-2 text-right">Headcount</th>
                     <th className="px-3 py-2 text-right">Monthly SEK</th>
+                    <th className="px-3 py-2 text-center">Start (YYYY-MM)</th>
+                    <th className="px-3 py-2 text-center">End (YYYY-MM)</th>
                     <th className="px-3 py-2 text-right">Yearly (incl. social)</th>
                   </tr>
                 </thead>
@@ -317,6 +319,54 @@ function BudgetTool() {
                           className="h-7 w-32 rounded-sm border-border bg-background text-right"
                         />
                       </td>
+                      <td className="px-3 py-1.5 text-center">
+                        <Input
+                          type="month"
+                          value={
+                            r.startYear
+                              ? `${r.startYear}-${String(r.startMonth ?? 1).padStart(2, "0")}`
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            const salaries = [...ya.salaries];
+                            if (!v) {
+                              const { startYear: _y, startMonth: _m, ...rest } = r;
+                              void _y; void _m;
+                              salaries[i] = rest;
+                            } else {
+                              const [Y, M] = v.split("-");
+                              salaries[i] = { ...r, startYear: Number(Y), startMonth: Number(M) };
+                            }
+                            patch({ salaries });
+                          }}
+                          className="h-7 w-[130px] rounded-sm border-border bg-background text-xs"
+                        />
+                      </td>
+                      <td className="px-3 py-1.5 text-center">
+                        <Input
+                          type="month"
+                          value={
+                            r.endYear
+                              ? `${r.endYear}-${String(r.endMonth ?? 12).padStart(2, "0")}`
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            const salaries = [...ya.salaries];
+                            if (!v) {
+                              const { endYear: _y, endMonth: _m, ...rest } = r;
+                              void _y; void _m;
+                              salaries[i] = rest;
+                            } else {
+                              const [Y, M] = v.split("-");
+                              salaries[i] = { ...r, endYear: Number(Y), endMonth: Number(M) };
+                            }
+                            patch({ salaries });
+                          }}
+                          className="h-7 w-[130px] rounded-sm border-border bg-background text-xs"
+                        />
+                      </td>
                       <td className="px-3 py-1.5 text-right text-muted-foreground">
                         {fmtSEK(r.count * r.monthlySalary * 12 * (1 + ya.socialFeesPct))}
                       </td>
@@ -330,11 +380,14 @@ function BudgetTool() {
                     <td className="px-3 py-2 text-right">
                       {fmtSEK(ya.salaries.reduce((a, b) => a + b.count * b.monthlySalary, 0))}
                     </td>
+                    <td className="px-3 py-2" />
+                    <td className="px-3 py-2" />
                     <td className="px-3 py-2 text-right">
                       {fmtSEK(yr.salaryCost)}
                     </td>
                   </tr>
                 </tbody>
+
               </table>
             </div>
           </Panel>
