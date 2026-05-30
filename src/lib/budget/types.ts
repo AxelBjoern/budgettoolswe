@@ -173,4 +173,22 @@ export interface Scenario {
   name: string;
   createdAt: number;
   assumptions: Assumptions;
+  /** Actual reported monthly numbers. */
+  actuals?: Actuals;
+  /** Optional contract anchor date (ISO YYYY-MM-DD). Display only. */
+  contractStartDate?: string;
 }
+
+export interface ActualMonth {
+  year: number;
+  month: number; // 1..12
+  customers?: number;
+  totalIncome?: number;
+  totalCost?: number;
+  volumeByArea?: Partial<Record<PriceAreaKey, number>>;
+}
+
+export interface Actuals {
+  rows: ActualMonth[];
+}
+
