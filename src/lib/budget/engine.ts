@@ -181,11 +181,6 @@ export function compute(a: Assumptions): ComputedModel {
         (avgCust * ya.extraServicesPerCustomerYear * sellMult) / 12;
       const subscriptionIncome =
         (avgCust * ya.subscriptionPerCustomerYear * sellMult) / 12;
-      const totalIncome =
-        electricityIncome +
-        certificateIncome +
-        extraServicesIncome +
-        subscriptionIncome;
 
       const invoicingCost = (avgCust * ya.invoicingCostPerCustomer) / 12;
 
