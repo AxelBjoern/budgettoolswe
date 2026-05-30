@@ -1,4 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useActiveScenario, useBudgetStore } from "@/lib/budget/store";
 import {
   Select,
