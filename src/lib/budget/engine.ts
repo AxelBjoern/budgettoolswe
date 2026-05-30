@@ -189,6 +189,41 @@ export function compute(a: Assumptions): ComputedModel {
 
       const invoicingCost = (avgCust * ya.invoicingCostPerCustomer) / 12;
 
+      // -------- Revenue streams (solar / battery / VPP / SaaS) --------
+      let streamIncome = 0;
+      let streamCost = 0;
+      const streamsMonth: Record<StreamKey, { revenue: number; cost: number; activeUnits: number }> = emptyStreamBreakdown((k) => ({ revenue: 0, cost: 0, activeUnits: streamActive[k] }));
+      for (const sk of STREAM_KEYS) {
+        const s: StreamAssumptions | undefined = ya.streams?.[sk];
+        if (!s || !s.enabled) {
+          streamsMonth[sk] = { revenue: 0, cost: 0, activeUnits: streamActive[sk] };
+          continue;
+        }
+        const newU = s.newUnitsPerYear / 12;
+        const mChurn = s.annualChurnPct > 0 ? 1 - Math.pow(1 - s.annualChurnPct, 1 / 12) : 0;
+        const startU = streamActive[sk];
+        const churnU = (startU + newU / 2) * mChurn;
+        const endU = startU + newU - churnU;
+        const avgU = (startU + endU) / 2;
+        const oneTimeRev = newU * s.oneTimeRevenuePerUnit;
+        const oneTimeCost = oneTimeRev * s.oneTimeCogsPct;
+        const recRev = avgU * s.recurringMonthlyPerUnit;
+        const recCost = recRev * s.recurringCogsPct;
+        const rev = oneTimeRev + recRev;
+        const cost = oneTimeCost + recCost;
+        streamsMonth[sk] = { revenue: rev, cost, activeUnits: endU };
+        streamIncome += rev;
+        streamCost += cost;
+        streamActive[sk] = endU;
+      }
+
+      const totalIncome =
+        electricityIncome +
+        certificateIncome +
+        extraServicesIncome +
+        subscriptionIncome +
+        streamIncome;
+
       const totalCost =
         electricityCost +
         certificateCost +
@@ -196,7 +231,8 @@ export function compute(a: Assumptions): ComputedModel {
         salesMonth +
         salaryMonth +
         otherExtMonth +
-        loanMonth;
+        loanMonth +
+        streamCost;
 
       const ebitda = totalIncome - totalCost + loanMonth; // EBITDA before interest
       const cashFlow = totalIncome - totalCost;
@@ -207,7 +243,8 @@ export function compute(a: Assumptions): ComputedModel {
           certificateCost +
           invoicingCost +
           otherExtMonth +
-          salesMonth) *
+          salesMonth +
+          streamCost) *
         a.vatRate;
 
       const row: MonthlyRow = {
@@ -230,6 +267,9 @@ export function compute(a: Assumptions): ComputedModel {
         otherExternal: otherExtMonth,
         loanInterest: loanMonth,
         totalCost,
+        streamIncome,
+        streamCost,
+        streamsBreakdown: streamsMonth,
         ebitda,
         cashFlow,
         vatOut,
@@ -255,6 +295,13 @@ export function compute(a: Assumptions): ComputedModel {
       yearAgg.otherExternal += otherExtMonth;
       yearAgg.invoicingCost += invoicingCost;
       yearAgg.loanInterest += loanMonth;
+      yearAgg.streamIncome += streamIncome;
+      yearAgg.streamCost += streamCost;
+      for (const sk of STREAM_KEYS) {
+        yearAgg.streamsBreakdown[sk].revenue += streamsMonth[sk].revenue;
+        yearAgg.streamsBreakdown[sk].cost += streamsMonth[sk].cost;
+        yearAgg.streamsBreakdown[sk].endingUnits = streamsMonth[sk].activeUnits;
+      }
 
       for (const k of PRICE_AREAS) {
         yearAgg.volumeByArea[k] += kwhMonth * ya.priceAreaShare[k];
