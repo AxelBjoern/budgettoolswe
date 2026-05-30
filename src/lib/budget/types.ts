@@ -224,6 +224,10 @@ export interface MonthlyRow {
   otherExternal: number;
   loanInterest: number;
   totalCost: number;
+  // Streams
+  streamIncome: number;
+  streamCost: number;
+  streamsBreakdown?: Record<StreamKey, { revenue: number; cost: number; activeUnits: number }>;
   // Results
   ebitda: number;
   cashFlow: number;
@@ -261,6 +265,10 @@ export interface YearlyRow {
   revenueByArea: Record<PriceAreaKey, number>;
   /** Cost-of-goods per price area (SEK) — populated when useAreaPricing=true */
   cogsByArea: Record<PriceAreaKey, number>;
+  /** Aggregated stream income (sum of all enabled streams). */
+  streamIncome: number;
+  streamCost: number;
+  streamsBreakdown: Record<StreamKey, { revenue: number; cost: number; endingUnits: number }>;
 }
 
 export interface ComputedModel {
