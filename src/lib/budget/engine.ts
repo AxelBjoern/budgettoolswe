@@ -358,3 +358,100 @@ export function buildResults(
 
   return { rows, ytdBudget, ytdActual, latestCustomers };
 }
+
+// ---------- Financial statements ----------
+
+/**
+ * Derive monthly P&L, indirect Cash Flow and rolling Balance Sheet from the
+ * computed model. Capex is not modeled yet (Module 2+ adds asset purchases);
+ * depreciation runs only on opening fixed assets straight-line over
+ * `depreciationYears`. Working capital uses DSO/DPO against trailing
+ * revenue / cost-of-goods.
+ */
+export function buildStatements(
+  model: ComputedModel,
+  a: Assumptions,
+): Statements {
+  const taxRate = a.taxRate ?? 0;
+  const depYears = Math.max(1, a.depreciationYears ?? 5);
+  const dso = a.dso ?? 0;
+  const dpo = a.dpo ?? 0;
+  const opening = a.opening ?? {
+    cash: 0,
+    accountsReceivable: 0,
+    accountsPayable: 0,
+    fixedAssets: 0,
+    debt: 0,
+    equity: 0,
+  };
+
+  const pnl: PnLRow[] = [];
+  const cashFlow: CashFlowRow[] = [];
+  const balanceSheet: BalanceSheetRow[] = [];
+
+  let cash = opening.cash;
+  let ar = opening.accountsReceivable;
+  let ap = opening.accountsPayable;
+  let fixedAssets = opening.fixedAssets;
+  let debt = opening.debt;
+  let equity = opening.equity;
+
+  // Straight-line depreciation of opening fixed assets only.
+  const monthlyDep = fixedAssets / (depYears * 12);
+
+  for (const m of model.monthly) {
+    const revenue = m.totalIncome;
+    const cogs = m.electricityCost + m.certificateCost;
+    const opex =
+      m.invoicingCost + m.salesCost + m.salaryCost + m.otherExternal;
+    const ebitda = revenue - cogs - opex;
+    const depreciation = Math.max(0, Math.min(monthlyDep, fixedAssets));
+    const ebit = ebitda - depreciation;
+    const interest = m.loanInterest;
+    const ebt = ebit - interest;
+    const tax = ebt > 0 ? ebt * taxRate : 0;
+    const netIncome = ebt - tax;
+
+    // Working capital targets
+    const targetAR = (revenue * 12 * dso) / 365;
+    const targetAP = ((cogs + opex) * 12 * dpo) / 365;
+    const changeAR = targetAR - ar;
+    const changeAP = targetAP - ap;
+    ar = targetAR;
+    ap = targetAP;
+
+    const cfo = netIncome + depreciation - changeAR + changeAP;
+    const capex = 0;
+    const cfi = -capex;
+    const debtChange = 0;
+    const cff = debtChange;
+    const netChange = cfo + cfi + cff;
+
+    cash += netChange;
+    fixedAssets = Math.max(0, fixedAssets - depreciation) + capex;
+    debt += debtChange;
+    equity += netIncome;
+
+    pnl.push({
+      year: m.year, month: m.month,
+      revenue, cogs, grossProfit: revenue - cogs,
+      opex, ebitda, depreciation, ebit, interest, ebt, tax, netIncome,
+    });
+    cashFlow.push({
+      year: m.year, month: m.month,
+      netIncome, depreciation, changeAR, changeAP, cfo,
+      capex, cfi, debtChange, cff, netChange, endingCash: cash,
+    });
+    const totalAssets = cash + ar + fixedAssets;
+    const totalLiabilities = ap + debt;
+    const totalLiabEquity = totalLiabilities + equity;
+    balanceSheet.push({
+      year: m.year, month: m.month,
+      cash, accountsReceivable: ar, fixedAssets, totalAssets,
+      accountsPayable: ap, debt, totalLiabilities, equity, totalLiabEquity,
+      check: totalAssets - totalLiabEquity,
+    });
+  }
+
+  return { pnl, cashFlow, balanceSheet };
+}
