@@ -14,21 +14,23 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { FileSpreadsheet, FileText, Presentation, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Presentation, Loader2, Printer, AlertTriangle } from "lucide-react";
 import { useActiveScenario } from "@/lib/budget/store";
-import { compute } from "@/lib/budget/engine";
+import { compute, buildStatements } from "@/lib/budget/engine";
 import {
   buildBoardContext,
   exportExcel,
   exportPDF,
   exportPPTX,
 } from "@/lib/budget/exports";
+import { buildSensitivity } from "@/lib/budget/sensitivity";
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { KpiCard } from "@/components/budget/KpiCard";
 import { Button } from "@/components/ui/button";
 import { fmtSEK, fmtNum, fmtPct } from "@/lib/budget/format";
 import { EbitdaWaterfall, FinancingBridge } from "@/components/budget/BridgeCharts";
 import { useBudgetStore } from "@/lib/budget/store";
+
 
 export const Route = createFileRoute("/_app/board")({
   head: () => ({
@@ -57,6 +59,10 @@ function BoardPage() {
   const bridgeYear =
     model.yearly.find((y) => y.year === selectedYear) ?? model.yearly[model.yearly.length - 1];
 
+  const statements = useMemo(() => buildStatements(model, scenario.assumptions), [model, scenario]);
+  const lastCF = statements.cashFlow[statements.cashFlow.length - 1];
+  const cumulativeCFO = statements.cashFlow.reduce((a, r) => a + r.cfo, 0);
+
   const horizon = {
     revenue: model.yearly.reduce((a, y) => a + y.totalIncome, 0),
     ebitda: model.yearly.reduce((a, y) => a + y.ebitda, 0),
@@ -64,8 +70,14 @@ function BoardPage() {
     endCustomers: model.yearly[model.yearly.length - 1].endingCustomers,
     streamRev: model.yearly.reduce((a, y) => a + y.streamIncome, 0),
     financingOut: model.yearly[model.yearly.length - 1].financingEndingOutstanding,
+    endingCash: lastCF?.endingCash ?? 0,
+    cumulativeCFO,
   };
   const margin = horizon.revenue > 0 ? horizon.ebitda / horizon.revenue : 0;
+
+  const sensitivity = useMemo(() => buildSensitivity(scenario.assumptions, 0.1), [scenario]);
+  const topRisks = sensitivity.rows.slice(0, 3);
+
 
   const yearlyChart = model.yearly.map((y) => ({
     year: String(y.year),
@@ -94,7 +106,13 @@ function BoardPage() {
         title="Board Pack"
         subtitle={`Horizon ${model.yearly[0].year}–${model.yearly[model.yearly.length - 1].year} · Scenario · ${scenario.name}`}
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 no-print">
+            <ExportButton
+              label="Print"
+              icon={Printer}
+              busy={false}
+              onClick={() => window.print()}
+            />
             <ExportButton
               label="Excel"
               icon={FileSpreadsheet}
@@ -114,10 +132,11 @@ function BoardPage() {
               onClick={() => run("pptx")}
             />
           </div>
+
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-9 print-break-avoid">
         <KpiCard label="Horizon revenue" value={fmtSEK(horizon.revenue, { compact: true })} />
         <KpiCard
           label="Horizon EBITDA"
@@ -130,14 +149,57 @@ function BoardPage() {
           tone={margin >= 0 ? "positive" : "negative"}
         />
         <KpiCard
+          label="Cumulative CFO"
+          value={fmtSEK(horizon.cumulativeCFO, { compact: true })}
+          tone={horizon.cumulativeCFO >= 0 ? "positive" : "negative"}
+        />
+        <KpiCard
+          label="Ending cash"
+          value={fmtSEK(horizon.endingCash, { compact: true })}
+          tone={horizon.endingCash >= 0 ? "positive" : "negative"}
+        />
+        <KpiCard label="Ending customers" value={fmtNum(horizon.endCustomers)} />
+        <KpiCard label="Stream revenue" value={fmtSEK(horizon.streamRev, { compact: true })} />
+        <KpiCard label="Financing out." value={fmtSEK(horizon.financingOut, { compact: true })} />
+        <KpiCard
           label="Horizon cash flow"
           value={fmtSEK(horizon.cash, { compact: true })}
           tone={horizon.cash >= 0 ? "positive" : "negative"}
         />
-        <KpiCard label="Ending customers" value={fmtNum(horizon.endCustomers)} />
-        <KpiCard label="Stream revenue" value={fmtSEK(horizon.streamRev, { compact: true })} />
-        <KpiCard label="Financing outstanding" value={fmtSEK(horizon.financingOut, { compact: true })} />
       </div>
+
+      <section className="rounded-sm border border-border bg-card/40 p-4 print-break-avoid">
+        <div className="mb-3 flex items-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-[hsl(var(--accent))]" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Key risks & sensitivities · ±10% on horizon EBITDA
+          </h3>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {topRisks.map((r) => (
+            <div key={r.key} className="rounded-sm border border-border bg-background/60 p-3">
+              <div className="flex items-baseline justify-between">
+                <div className="text-sm font-semibold">{r.label}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {r.group}
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between text-xs tabular-nums">
+                <span className="num-neg">−{fmtSEK(Math.abs(r.lowDelta), { compact: true })}</span>
+                <span className="text-muted-foreground">spread</span>
+                <span className="text-[hsl(var(--success,142_70%_35%))]">
+                  +{fmtSEK(Math.abs(r.highDelta), { compact: true })}
+                </span>
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                Total swing {fmtSEK(r.spread, { compact: true })} ·{" "}
+                {fmtPct(sensitivity.baseEbitda !== 0 ? r.spread / Math.abs(sensitivity.baseEbitda) : 0)} of base
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
       <section className="grid gap-6 lg:grid-cols-2">
         <ChartFrame title={`EBITDA bridge · ${bridgeYear.year}`}>

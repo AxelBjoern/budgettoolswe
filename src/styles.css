@@ -170,3 +170,16 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in { animation: none !important; }
 }
+
+/* Print: clean board pack export via Cmd-P. */
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  html, body { background: white !important; }
+  header, nav, .no-print { display: none !important; }
+  .print-break-avoid { break-inside: avoid; page-break-inside: avoid; }
+  .print-break-before { break-before: page; page-break-before: always; }
+  .print-full { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+  main { padding: 0 !important; }
+  .recharts-wrapper { break-inside: avoid; }
+}
+
