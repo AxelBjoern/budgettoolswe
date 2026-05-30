@@ -1,6 +1,9 @@
 // Pure budget computation engine.
 // Takes Assumptions, returns monthly + yearly aggregates.
 
+import { buildFinancing } from "./financing";
+
+
 import type {
   Actuals,
   Assumptions,
@@ -134,6 +137,9 @@ export function compute(a: Assumptions): ComputedModel {
       streamIncome: 0,
       streamCost: 0,
       streamsBreakdown: emptyStreamBreakdown((k) => ({ revenue: 0, cost: 0, endingUnits: streamActive[k] })),
+      financingIncome: 0,
+      financingCost: 0,
+      financingEndingOutstanding: 0,
     };
 
     for (let m = 1; m <= 12; m++) {
