@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppStatementsRouteImport } from './routes/_app/statements'
+import { Route as AppSensitivityRouteImport } from './routes/_app/sensitivity'
 import { Route as AppScenariosRouteImport } from './routes/_app/scenarios'
 import { Route as AppResultsRouteImport } from './routes/_app/results'
 import { Route as AppMonthlyRouteImport } from './routes/_app/monthly'
@@ -30,6 +31,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppStatementsRoute = AppStatementsRouteImport.update({
   id: '/statements',
   path: '/statements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSensitivityRoute = AppSensitivityRouteImport.update({
+  id: '/sensitivity',
+  path: '/sensitivity',
   getParentRoute: () => AppRoute,
 } as any)
 const AppScenariosRoute = AppScenariosRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/monthly': typeof AppMonthlyRoute
   '/results': typeof AppResultsRoute
   '/scenarios': typeof AppScenariosRoute
+  '/sensitivity': typeof AppSensitivityRoute
   '/statements': typeof AppStatementsRoute
 }
 export interface FileRoutesByTo {
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/monthly': typeof AppMonthlyRoute
   '/results': typeof AppResultsRoute
   '/scenarios': typeof AppScenariosRoute
+  '/sensitivity': typeof AppSensitivityRoute
   '/statements': typeof AppStatementsRoute
   '/': typeof AppIndexRoute
 }
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/_app/monthly': typeof AppMonthlyRoute
   '/_app/results': typeof AppResultsRoute
   '/_app/scenarios': typeof AppScenariosRoute
+  '/_app/sensitivity': typeof AppSensitivityRoute
   '/_app/statements': typeof AppStatementsRoute
   '/_app/': typeof AppIndexRoute
 }
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/monthly'
     | '/results'
     | '/scenarios'
+    | '/sensitivity'
     | '/statements'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/monthly'
     | '/results'
     | '/scenarios'
+    | '/sensitivity'
     | '/statements'
     | '/'
   id:
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/_app/monthly'
     | '/_app/results'
     | '/_app/scenarios'
+    | '/_app/sensitivity'
     | '/_app/statements'
     | '/_app/'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/statements'
       fullPath: '/statements'
       preLoaderRoute: typeof AppStatementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/sensitivity': {
+      id: '/_app/sensitivity'
+      path: '/sensitivity'
+      fullPath: '/sensitivity'
+      preLoaderRoute: typeof AppSensitivityRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/scenarios': {
@@ -189,6 +208,7 @@ interface AppRouteChildren {
   AppMonthlyRoute: typeof AppMonthlyRoute
   AppResultsRoute: typeof AppResultsRoute
   AppScenariosRoute: typeof AppScenariosRoute
+  AppSensitivityRoute: typeof AppSensitivityRoute
   AppStatementsRoute: typeof AppStatementsRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -199,6 +219,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMonthlyRoute: AppMonthlyRoute,
   AppResultsRoute: AppResultsRoute,
   AppScenariosRoute: AppScenariosRoute,
+  AppSensitivityRoute: AppSensitivityRoute,
   AppStatementsRoute: AppStatementsRoute,
   AppIndexRoute: AppIndexRoute,
 }
@@ -211,3 +232,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
