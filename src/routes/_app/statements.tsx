@@ -82,7 +82,35 @@ function StatementsPage() {
         }
       />
 
+      <div className="rounded-sm border border-border bg-card p-4">
+        <div className="mb-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Statements assumptions
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+          <NumField label="Tax rate %" value={(a.taxRate ?? 0) * 100}
+            onChange={(v) => updateAssumptions(scenario.id, { taxRate: v / 100 })} step={0.5} />
+          <NumField label="Depr. years" value={a.depreciationYears ?? 5}
+            onChange={(v) => updateAssumptions(scenario.id, { depreciationYears: v })} step={1} />
+          <NumField label="DSO (days)" value={a.dso ?? 0}
+            onChange={(v) => updateAssumptions(scenario.id, { dso: v })} step={1} />
+          <NumField label="DPO (days)" value={a.dpo ?? 0}
+            onChange={(v) => updateAssumptions(scenario.id, { dpo: v })} step={1} />
+        </div>
+        <div className="mt-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Opening balance sheet (SEK)
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <NumField label="Cash" value={opening.cash} onChange={(v) => setOpening({ cash: v })} />
+          <NumField label="A/R" value={opening.accountsReceivable} onChange={(v) => setOpening({ accountsReceivable: v })} />
+          <NumField label="A/P" value={opening.accountsPayable} onChange={(v) => setOpening({ accountsPayable: v })} />
+          <NumField label="Fixed assets" value={opening.fixedAssets} onChange={(v) => setOpening({ fixedAssets: v })} />
+          <NumField label="Debt" value={opening.debt} onChange={(v) => setOpening({ debt: v })} />
+          <NumField label="Equity" value={opening.equity} onChange={(v) => setOpening({ equity: v })} />
+        </div>
+      </div>
+
       <Tabs defaultValue="pnl" className="w-full">
+
         <TabsList className="rounded-sm">
           <TabsTrigger value="pnl">P&amp;L</TabsTrigger>
           <TabsTrigger value="cf">Cash Flow</TabsTrigger>
