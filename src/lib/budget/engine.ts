@@ -72,6 +72,15 @@ export function compute(a: Assumptions): ComputedModel {
   let runningStart = a.perYear[0].startingCustomers;
   const appreciation = a.salesAppreciationPct ?? 0;
 
+  // Carry per-stream active units across years.
+  const streamActive: Record<StreamKey, number> = {
+    solar: a.perYear[0].streams?.solar?.startingUnits ?? 0,
+    battery: a.perYear[0].streams?.battery?.startingUnits ?? 0,
+    vpp: a.perYear[0].streams?.vpp?.startingUnits ?? 0,
+    saas: a.perYear[0].streams?.saas?.startingUnits ?? 0,
+  };
+
+
   for (let y = 0; y < a.years; y++) {
     const ya = a.perYear[y];
     const yearStartCustomers = y === 0 ? ya.startingCustomers : runningStart;
@@ -116,6 +125,9 @@ export function compute(a: Assumptions): ComputedModel {
       volumeByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
       revenueByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
       cogsByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
+      streamIncome: 0,
+      streamCost: 0,
+      streamsBreakdown: emptyStreamBreakdown((k) => ({ revenue: 0, cost: 0, endingUnits: streamActive[k] })),
     };
 
     for (let m = 1; m <= 12; m++) {
