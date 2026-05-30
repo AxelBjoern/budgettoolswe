@@ -287,7 +287,13 @@ export interface MonthlyRow {
   // Streams
   streamIncome: number;
   streamCost: number;
+  streamIncome: number;
+  streamCost: number;
   streamsBreakdown?: Record<StreamKey, { revenue: number; cost: number; activeUnits: number }>;
+  // Financing
+  financingIncome: number;
+  financingCost: number;
+  financingOutstanding: number;
   // Results
   ebitda: number;
   cashFlow: number;
@@ -329,6 +335,9 @@ export interface YearlyRow {
   streamIncome: number;
   streamCost: number;
   streamsBreakdown: Record<StreamKey, { revenue: number; cost: number; endingUnits: number }>;
+  financingIncome: number;
+  financingCost: number;
+  financingEndingOutstanding: number;
 }
 
 export interface ComputedModel {
