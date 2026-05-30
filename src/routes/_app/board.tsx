@@ -53,6 +53,10 @@ function BoardPage() {
   );
   const [busy, setBusy] = useState<"xlsx" | "pdf" | "pptx" | null>(null);
 
+  const selectedYear = useBudgetStore((s) => s.selectedYear);
+  const bridgeYear =
+    model.yearly.find((y) => y.year === selectedYear) ?? model.yearly[model.yearly.length - 1];
+
   const horizon = {
     revenue: model.yearly.reduce((a, y) => a + y.totalIncome, 0),
     ebitda: model.yearly.reduce((a, y) => a + y.ebitda, 0),
@@ -61,6 +65,7 @@ function BoardPage() {
     streamRev: model.yearly.reduce((a, y) => a + y.streamIncome, 0),
     financingOut: model.yearly[model.yearly.length - 1].financingEndingOutstanding,
   };
+  const margin = horizon.revenue > 0 ? horizon.ebitda / horizon.revenue : 0;
 
   const yearlyChart = model.yearly.map((y) => ({
     year: String(y.year),
