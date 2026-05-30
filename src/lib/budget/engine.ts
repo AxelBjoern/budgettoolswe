@@ -467,7 +467,7 @@ export function buildStatements(
 
   for (const m of model.monthly) {
     const revenue = m.totalIncome;
-    const cogs = m.electricityCost + m.certificateCost;
+    const cogs = m.electricityCost + m.certificateCost + m.streamCost;
     const opex =
       m.invoicingCost + m.salesCost + m.salaryCost + m.otherExternal;
     const ebitda = revenue - cogs - opex;
