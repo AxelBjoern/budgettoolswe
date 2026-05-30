@@ -83,6 +83,8 @@ export interface YearAssumptions {
   priceAreaPricing?: Record<PriceAreaKey, AreaPricing>;
   /** When true and priceAreaPricing is set, engine uses per-area pricing instead of global pricePerKwh/costPerKwh/certificateCostPerKwh. */
   useAreaPricing?: boolean;
+  /** First month (1..12) within this year that new customers are acquired. Defaults to 1. */
+  salesStartMonth?: number;
 }
 
 export interface Assumptions {
@@ -94,6 +96,8 @@ export interface Assumptions {
   perYear: YearAssumptions[];
   /** VAT rate (0..1) */
   vatRate: number;
+  /** Yearly sales appreciation rate (0..1). Applied to sell-side prices, subscriptions, extra services. */
+  salesAppreciationPct?: number;
 }
 
 export interface MonthlyRow {
