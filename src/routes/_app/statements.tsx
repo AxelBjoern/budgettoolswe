@@ -36,6 +36,7 @@ type View = "monthly" | "annual";
 function StatementsPage() {
   const scenario = useActiveScenario();
   const year = useBudgetStore((s) => s.selectedYear);
+  const updateAssumptions = useBudgetStore((s) => s.updateAssumptions);
   const [view, setView] = useState<View>("annual");
 
   const model = useMemo(() => compute(scenario.assumptions), [scenario]);
@@ -43,6 +44,15 @@ function StatementsPage() {
     () => buildStatements(model, scenario.assumptions),
     [model, scenario.assumptions],
   );
+
+  const a = scenario.assumptions;
+  const opening = a.opening ?? {
+    cash: 0, accountsReceivable: 0, accountsPayable: 0,
+    fixedAssets: 0, debt: 0, equity: 0,
+  };
+  const setOpening = (patch: Partial<typeof opening>) =>
+    updateAssumptions(scenario.id, { opening: { ...opening, ...patch } });
+
 
   return (
     <div className="space-y-6">
