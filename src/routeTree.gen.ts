@@ -15,6 +15,7 @@ import { Route as AppStatementsRouteImport } from './routes/_app/statements'
 import { Route as AppScenariosRouteImport } from './routes/_app/scenarios'
 import { Route as AppResultsRouteImport } from './routes/_app/results'
 import { Route as AppMonthlyRouteImport } from './routes/_app/monthly'
+import { Route as AppFinancingRouteImport } from './routes/_app/financing'
 import { Route as AppBudgetRouteImport } from './routes/_app/budget'
 
 const AppRoute = AppRouteImport.update({
@@ -46,6 +47,11 @@ const AppMonthlyRoute = AppMonthlyRouteImport.update({
   path: '/monthly',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFinancingRoute = AppFinancingRouteImport.update({
+  id: '/financing',
+  path: '/financing',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBudgetRoute = AppBudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
@@ -55,6 +61,7 @@ const AppBudgetRoute = AppBudgetRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/budget': typeof AppBudgetRoute
+  '/financing': typeof AppFinancingRoute
   '/monthly': typeof AppMonthlyRoute
   '/results': typeof AppResultsRoute
   '/scenarios': typeof AppScenariosRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/budget': typeof AppBudgetRoute
+  '/financing': typeof AppFinancingRoute
   '/monthly': typeof AppMonthlyRoute
   '/results': typeof AppResultsRoute
   '/scenarios': typeof AppScenariosRoute
@@ -72,6 +80,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/budget': typeof AppBudgetRoute
+  '/_app/financing': typeof AppFinancingRoute
   '/_app/monthly': typeof AppMonthlyRoute
   '/_app/results': typeof AppResultsRoute
   '/_app/scenarios': typeof AppScenariosRoute
@@ -83,16 +92,25 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/budget'
+    | '/financing'
     | '/monthly'
     | '/results'
     | '/scenarios'
     | '/statements'
   fileRoutesByTo: FileRoutesByTo
-  to: '/budget' | '/monthly' | '/results' | '/scenarios' | '/statements' | '/'
+  to:
+    | '/budget'
+    | '/financing'
+    | '/monthly'
+    | '/results'
+    | '/scenarios'
+    | '/statements'
+    | '/'
   id:
     | '__root__'
     | '/_app'
     | '/_app/budget'
+    | '/_app/financing'
     | '/_app/monthly'
     | '/_app/results'
     | '/_app/scenarios'
@@ -148,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMonthlyRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/financing': {
+      id: '/_app/financing'
+      path: '/financing'
+      fullPath: '/financing'
+      preLoaderRoute: typeof AppFinancingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/budget': {
       id: '/_app/budget'
       path: '/budget'
@@ -160,6 +185,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppBudgetRoute: typeof AppBudgetRoute
+  AppFinancingRoute: typeof AppFinancingRoute
   AppMonthlyRoute: typeof AppMonthlyRoute
   AppResultsRoute: typeof AppResultsRoute
   AppScenariosRoute: typeof AppScenariosRoute
@@ -169,6 +195,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBudgetRoute: AppBudgetRoute,
+  AppFinancingRoute: AppFinancingRoute,
   AppMonthlyRoute: AppMonthlyRoute,
   AppResultsRoute: AppResultsRoute,
   AppScenariosRoute: AppScenariosRoute,
@@ -184,3 +211,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
