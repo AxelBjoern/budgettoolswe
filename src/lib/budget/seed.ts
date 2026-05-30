@@ -61,6 +61,7 @@ export const SEED_ASSUMPTIONS: Assumptions = {
   startYear: 2026,
   years: 5,
   vatRate: 0.25,
+  salesAppreciationPct: 0,
   perYear: [
     yearAssumptions(1.0, 1200),
     yearAssumptions(1.1, 0), // engine will use computed end-of-prior-year
