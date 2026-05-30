@@ -1,103 +1,95 @@
-# Merge Energy System Pricing Into Budget Tool
+# Budget Tool — Next Iteration
 
-Keep the current budget model and Price Areas UI as-is. **Add** per-zone pricing (avg purchase / påslag / elcert in öre/kWh) on top, mirroring the Energy system's `PricingTab`, and let it optionally override the global `pricePerKwh` / `costPerKwh` / `certificateCostPerKwh` when populated.
+Two additive feature blocks on top of the existing budget model. No breaking changes to current scenarios; defaults keep today's numbers unchanged.
 
-## 1. Extend the data model (additive, no breaking changes)
+---
 
-`src/lib/budget/types.ts` — add an optional block, leave every existing field intact:
+## A. Results / Actuals tab
 
+New "Results" view where the user enters actual monthly numbers and sees variance vs budget.
+
+### Data
+`src/lib/budget/types.ts` — additive:
 ```ts
-export interface AreaPricing {
-  avgPurchaseOre: number; // öre/kWh (Energy system: avg_purchase_price_per_mwh / 10)
-  pslagOre: number;       // öre/kWh (pslag_per_mwh / 10)
-  elcertOre: number;      // öre/kWh (elcert_per_mwh / 10)
+export interface ActualMonth {
+  year: number; month: number;
+  customers?: number;
+  totalIncome?: number;
+  totalCost?: number;
+  volumeByArea?: Partial<Record<PriceAreaKey, number>>;
 }
-export interface YearAssumptions {
-  // ...all existing fields untouched...
-  /** Optional per-area pricing override. When defined, engine uses these per zone instead of global pricePerKwh/costPerKwh/certificateCostPerKwh. */
-  priceAreaPricing?: Record<PriceAreaKey, AreaPricing>;
-  /** Toggle to actually use priceAreaPricing in compute */
-  useAreaPricing?: boolean;
-}
+export interface Actuals { rows: ActualMonth[] }
 ```
+`Scenario` gains `actuals: Actuals`. `seed.ts` seeds `{ rows: [] }`. `store.ts` adds `setActual(year, month, patch)` and `clearActuals(year?)`.
 
-Add `volumeByArea` is already there. Also add `revenueByArea` and `cogsByArea` to `YearlyRow` for the new chart (additive).
+### Engine
+`engine.ts` gets a pure helper `buildResults(model, actuals, year)` that joins budget vs actuals per month and returns variance + YTD totals. `compute()` is untouched.
 
-## 2. Engine — opt-in branch in compute()
+### UI
+`src/routes/_app/results.tsx` + nav link in `Topbar`:
+- KPI strip: Actual YTD income, Δ% vs budget, Actual EBITDA, latest reported customers.
+- Editable 12-row table (Month | Cust | Income | Cost | EBITDA | Δ Income | Δ Cost | Δ EBITDA). Empty cells = "—". Negative deltas use `num-neg`.
+- Buttons: "Clear year", "Copy budget → actuals" (prefill).
+- Optional collapsible: per-area actual volume.
 
-`src/lib/budget/engine.ts`: inside the monthly loop, when `ya.useAreaPricing && ya.priceAreaPricing`, replace the single-line `electricityIncome` / `electricityCost` / `certificateCost` with a per-area sum, weighted by `priceAreaShare`:
+Styling identical to existing tabs (rounded-sm border-border bg-card, serif headings, tabular-nums).
 
-```text
-for each area k:
-  kwhArea = kwhMonth * share[k]
-  sellSEK = (avgPurchaseOre[k] + pslagOre[k]) / 100
-  costSEK = avgPurchaseOre[k] / 100
-  certSEK = elcertOre[k] / 100
-  electricityIncome += kwhArea * sellSEK * (1 + surchargePct)
-  electricityCost   += kwhArea * costSEK
-  certificateCost   += kwhArea * certSEK
-  certificateIncome += kwhArea * certSEK   // pass-through, same as today
-  revenueByArea[k]  += kwhArea * sellSEK
-  cogsByArea[k]     += kwhArea * (costSEK + certSEK)
-```
+---
 
-When the toggle is off, the existing formulas stay byte-identical. No existing scenario changes its numbers.
+## B. Time-phased plans: hires, contracts, sales ramp & appreciation
 
-## 3. Seed defaults (`src/lib/budget/seed.ts`)
+Today everything is annualized. Add **start dates** so costs/revenues only count from a specific month, plus a yearly **appreciation %** that compounds sales over the horizon.
 
-Add — alongside the current globals, do not remove them:
-
+### B1. Employee start dates
+`SalaryRole` gains:
 ```ts
-priceAreaPricing: {
-  SE1: { avgPurchaseOre: 28, pslagOre: 8, elcertOre: 4.5 },
-  SE2: { avgPurchaseOre: 32, pslagOre: 8, elcertOre: 4.5 },
-  SE3: { avgPurchaseOre: 58, pslagOre: 10, elcertOre: 4.5 },
-  SE4: { avgPurchaseOre: 78, pslagOre: 12, elcertOre: 4.5 },
-},
-useAreaPricing: false, // start opt-in
+startYear?: number;   // first year the role exists (default: scenario start)
+startMonth?: number;  // 1..12, default 1
+endYear?: number;     // optional, role ends
+endMonth?: number;
 ```
+Engine: salary line iterates monthly; a role contributes only when `(year, month) >= start` and `<= end`. Replaces the current `salaryMonth = salaryYear / 12` with a month-aware sum. Social fees applied as today.
 
-## 4. Budget UI — extend the existing Price Areas tab
+UI (`budget.tsx` Salaries tab): two compact `YYYY-MM` selects per row (Start / End). Defaults blank = always active.
 
-`src/routes/_app/budget.tsx`: keep the existing share editor exactly as it is. Below the share table, in the same `Panel` and same VDNX style (hairline borders, `tabular-nums`, `text-xs uppercase tracking-wider` headers), add:
-
-- A switch **"Use per-area pricing"** bound to `ya.useAreaPricing`. When off, the rest of the section is dimmed and read-only.
-- A second table with one row per zone:
-
-```text
-Zone | Avg öre/kWh | Påslag öre/kWh | Elcert öre/kWh | Total öre/kWh | SEK/kWh
+### B2. Customer-acquisition / contracts start date
+`YearAssumptions` gains:
+```ts
+salesStartMonth?: number; // 1..12 — first month new customers are acquired this year
 ```
+Engine: months before `salesStartMonth` get `newPerMonth = 0` (and zero sales cost). Months on/after split the year's `newCustomersByChannel` total evenly across the remaining months so the annual channel mix stays meaningful.
 
-Inputs use `step=0.001`, same `FieldNum` styling already used in the tab. Footer row shows volume-weighted average (using current `priceAreaShare`), matching the Energy system's "Snitt (vägt)" line.
+UI: single month select in the "Customers & Churn" panel header, labeled "Sales start".
 
-Add a **"Sync from Energy system"** button in the same row as the existing *Reset / All to 1 / Export* buttons in the Budget header (not a new toolbar). Clicking opens a small dialog with:
+### B3. Sales appreciation (price escalation)
+`Assumptions` gains:
+```ts
+salesAppreciationPct: number; // yearly % uplift applied to pricePerKwh, subscription, extra services, and per-area pslagOre. Default 0.
+```
+Engine: for year index `i`, multiplier = `(1 + salesAppreciationPct) ** i`. Applied to:
+- `pricePerKwh` and per-area `avgPurchaseOre + pslagOre` sell side (cost side untouched — represents margin uplift)
+- `subscriptionPerCustomerYear`
+- `extraServicesPerCustomerYear`
 
-- A textarea accepting the exact JSON returned by `listManagedZonePrices` in the Energy system (`[{ zone, avg_purchase_price_per_mwh, pslag_per_mwh, elcert_per_mwh, volume_mwh }, …]`).
-- A checkbox **"Apply to all years"** (default on).
-- A checkbox **"Also update area share from volumes"** (default off).
-- On Apply: convert MWh→kWh and SEK/MWh→öre/kWh (×0.1), write into `priceAreaPricing`, and set `useAreaPricing = true`.
+Toggle in `Topbar` global controls: numeric input "Sales appreciation %/yr" next to year selector. Stored on the active scenario.
 
-The existing **"All to 1"** reset is extended to also set every area's pricing fields to 1 so totals stay finite.
+### B4. Contract anchor date (display only)
+`Scenario` gains `contractStartDate?: string` (ISO `YYYY-MM-DD`). Shown in Topbar and used as label only — no engine effect, but lets the user pin "model starts from this contract".
 
-## 5. Dashboard — surface the new info without redesign
-
-`src/routes/_app/index.tsx`: keep all current KPI cards and charts. Only:
-
-- The "Volume per Price Area" card stays as-is.
-- When `useAreaPricing` is on for the selected year, **add** a small companion bar chart **"Sell price per area (SEK/kWh)"** in the empty slot of the existing grid. Same `KpiCard`/chart styling. No layout reshuffle.
-- KPI "Avg sell SEK/kWh" (if present) reads weighted average from `revenueByArea / volumeByArea` when area pricing is on; otherwise it shows the current `pricePerKwh`.
-
-## 6. Out of scope
-
-- Live cross-project DB fetch from the Energy system's Supabase. The sync stays paste-JSON for now; a follow-up can expose a public read endpoint there and replace the dialog with a one-click fetch.
-- Monthly granularity per area (Energy system is monthly; budget tool stays yearly).
-- Renaming or removing any existing assumption field — strictly additive.
+---
 
 ## Files touched
 
-- `src/lib/budget/types.ts` — additive: `AreaPricing`, optional `priceAreaPricing`, `useAreaPricing`, optional `revenueByArea`/`cogsByArea` on `YearlyRow`
-- `src/lib/budget/engine.ts` — opt-in per-area branch
-- `src/lib/budget/seed.ts` — defaults for the new fields
-- `src/lib/budget/format.ts` — `fmtOre`, `fmtSekPerKwh`
-- `src/routes/_app/budget.tsx` — extended Price Areas tab + Sync dialog
-- `src/routes/_app/index.tsx` — optional per-area sell-price chart
+- `src/lib/budget/types.ts` — `ActualMonth`, `Actuals`, role start/end, `salesStartMonth`, `salesAppreciationPct`, `contractStartDate`
+- `src/lib/budget/seed.ts` — defaults (all opt-in, zero appreciation, no start-month gating)
+- `src/lib/budget/engine.ts` — month-aware salaries, sales-start gating, appreciation multiplier, `buildResults` helper
+- `src/lib/budget/store.ts` — actuals + appreciation mutations
+- `src/routes/_app/results.tsx` — new tab
+- `src/routes/_app/budget.tsx` — role date pickers, sales-start select, appreciation input integration
+- `src/components/budget/Topbar.tsx` — Results link, appreciation input, contract date
+
+## Out of scope
+- CSV import for actuals
+- Per-channel start dates (only one sales-start month per year)
+- Different appreciation per revenue stream (single global %)
+- Cross-project live fetch from Energy system
