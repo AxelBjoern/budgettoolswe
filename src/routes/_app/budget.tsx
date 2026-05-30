@@ -318,7 +318,7 @@ function BudgetTool() {
           </Panel>
         </TabsContent>
 
-        <TabsContent value="areas" className="mt-4">
+        <TabsContent value="areas" className="mt-4 space-y-4">
           <Panel title="Price area volume share (SE1–SE4)">
             <div className="grid gap-3 sm:grid-cols-4">
               {AREAS.map((k) => (
@@ -335,9 +335,263 @@ function BudgetTool() {
               Current sum: {fmtPct(AREAS.reduce((a, k) => a + ya.priceAreaShare[k], 0), 1)}
             </p>
           </Panel>
+
+          <Panel title="Per-area pricing (Energy system sync)">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-border pb-3">
+              <div>
+                <div className="text-sm font-medium">Use per-area pricing</div>
+                <p className="text-xs text-muted-foreground">
+                  When on, the engine derives revenue and cost from each zone's öre/kWh
+                  values instead of the global Pricing tab.
+                </p>
+              </div>
+              <Switch
+                checked={!!ya.useAreaPricing}
+                onCheckedChange={(v) => patch({ useAreaPricing: v })}
+              />
+            </div>
+            <AreaPricingTable
+              ya={ya}
+              disabled={!ya.useAreaPricing}
+              onChange={(k, p) =>
+                patch({
+                  priceAreaPricing: {
+                    ...(ya.priceAreaPricing ?? {
+                      SE1: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+                      SE2: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+                      SE3: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+                      SE4: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+                    }),
+                    [k]: p,
+                  },
+                })
+              }
+            />
+          </Panel>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function AreaPricingTable({
+  ya,
+  disabled,
+  onChange,
+}: {
+  ya: import("@/lib/budget/types").YearAssumptions;
+  disabled?: boolean;
+  onChange: (k: PriceAreaKey, p: AreaPricing) => void;
+}) {
+  const pricing = ya.priceAreaPricing ?? {
+    SE1: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+    SE2: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+    SE3: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+    SE4: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+  };
+  const weightedSell =
+    AREAS.reduce((a, k) => {
+      const p = pricing[k];
+      return a + ya.priceAreaShare[k] * (p.avgPurchaseOre + p.pslagOre);
+    }, 0);
+  const weightedCost = AREAS.reduce(
+    (a, k) => a + ya.priceAreaShare[k] * pricing[k].avgPurchaseOre,
+    0,
+  );
+  return (
+    <div className={`overflow-x-auto rounded-sm border border-border ${disabled ? "opacity-60" : ""}`}>
+      <table className="w-full text-sm tabular-nums">
+        <thead className="bg-muted/60 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 text-left">Zone</th>
+            <th className="px-3 py-2 text-right">Avg öre/kWh</th>
+            <th className="px-3 py-2 text-right">Påslag öre/kWh</th>
+            <th className="px-3 py-2 text-right">Elcert öre/kWh</th>
+            <th className="px-3 py-2 text-right">Total öre/kWh</th>
+            <th className="px-3 py-2 text-right">SEK/kWh</th>
+          </tr>
+        </thead>
+        <tbody>
+          {AREAS.map((k) => {
+            const p = pricing[k];
+            const total = p.avgPurchaseOre + p.pslagOre;
+            return (
+              <tr key={k} className="border-t border-border">
+                <td className="px-3 py-1.5 font-medium">{k}</td>
+                <td className="px-3 py-1.5">
+                  <Input
+                    type="number"
+                    step={0.001}
+                    disabled={disabled}
+                    value={p.avgPurchaseOre}
+                    onChange={(e) =>
+                      onChange(k, { ...p, avgPurchaseOre: Number(e.target.value) })
+                    }
+                    className="h-7 w-28 rounded-sm border-border bg-background text-right"
+                  />
+                </td>
+                <td className="px-3 py-1.5">
+                  <Input
+                    type="number"
+                    step={0.001}
+                    disabled={disabled}
+                    value={p.pslagOre}
+                    onChange={(e) =>
+                      onChange(k, { ...p, pslagOre: Number(e.target.value) })
+                    }
+                    className="h-7 w-28 rounded-sm border-border bg-background text-right"
+                  />
+                </td>
+                <td className="px-3 py-1.5">
+                  <Input
+                    type="number"
+                    step={0.001}
+                    disabled={disabled}
+                    value={p.elcertOre}
+                    onChange={(e) =>
+                      onChange(k, { ...p, elcertOre: Number(e.target.value) })
+                    }
+                    className="h-7 w-28 rounded-sm border-border bg-background text-right"
+                  />
+                </td>
+                <td className="px-3 py-1.5 text-right">{total.toFixed(2)}</td>
+                <td className="px-3 py-1.5 text-right text-muted-foreground">
+                  {fmtSekPerKwh(total / 100)}
+                </td>
+              </tr>
+            );
+          })}
+          <tr className="border-t border-border bg-muted/30 font-semibold">
+            <td className="px-3 py-2">Snitt (vägt)</td>
+            <td className="px-3 py-2 text-right">{weightedCost.toFixed(2)}</td>
+            <td className="px-3 py-2 text-right">—</td>
+            <td className="px-3 py-2 text-right">—</td>
+            <td className="px-3 py-2 text-right">{weightedSell.toFixed(2)}</td>
+            <td className="px-3 py-2 text-right">{fmtSekPerKwh(weightedSell / 100)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SyncFromEnergyDialog({
+  scenarioId,
+  years,
+  updateYear,
+  currentShare,
+}: {
+  scenarioId: string;
+  years: number;
+  updateYear: (id: string, idx: number, patch: Partial<import("@/lib/budget/types").YearAssumptions>) => void;
+  currentShare: Record<PriceAreaKey, number>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [json, setJson] = useState("");
+  const [applyAll, setApplyAll] = useState(true);
+  const [updateShare, setUpdateShare] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const apply = () => {
+    setError(null);
+    try {
+      const raw = JSON.parse(json);
+      if (!Array.isArray(raw)) throw new Error("Expected an array of zone rows");
+      const pricing: Record<PriceAreaKey, AreaPricing> = {
+        SE1: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+        SE2: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+        SE3: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+        SE4: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+      };
+      const volumes: Record<PriceAreaKey, number> = { SE1: 0, SE2: 0, SE3: 0, SE4: 0 };
+      for (const row of raw) {
+        const zone = String(row.zone || row.price_area || "").toUpperCase() as PriceAreaKey;
+        if (!AREAS.includes(zone)) continue;
+        pricing[zone] = {
+          avgPurchaseOre: Number(row.avg_purchase_price_per_mwh ?? 0) / 10,
+          pslagOre: Number(row.pslag_per_mwh ?? 0) / 10,
+          elcertOre: Number(row.elcert_per_mwh ?? 0) / 10,
+        };
+        volumes[zone] = Number(row.volume_mwh ?? 0);
+      }
+
+      let shareUpdate: Record<PriceAreaKey, number> | undefined;
+      if (updateShare) {
+        const total = AREAS.reduce((a, k) => a + volumes[k], 0);
+        if (total > 0) {
+          shareUpdate = {
+            SE1: volumes.SE1 / total,
+            SE2: volumes.SE2 / total,
+            SE3: volumes.SE3 / total,
+            SE4: volumes.SE4 / total,
+          };
+        }
+      }
+
+      const patch: Partial<import("@/lib/budget/types").YearAssumptions> = {
+        priceAreaPricing: pricing,
+        useAreaPricing: true,
+        ...(shareUpdate ? { priceAreaShare: shareUpdate } : {}),
+      };
+
+      const range = applyAll ? Array.from({ length: years }, (_, i) => i) : [0];
+      for (const i of range) updateYear(scenarioId, i, patch);
+      setOpen(false);
+      setJson("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Invalid JSON");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 rounded-sm">
+          <RefreshCw className="mr-1 h-3.5 w-3.5" />
+          Sync from Energy system
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Sync pricing from Energy system</DialogTitle>
+          <DialogDescription>
+            Paste the JSON returned by <code>listManagedZonePrices</code> — one row per
+            zone with <code>avg_purchase_price_per_mwh</code>, <code>pslag_per_mwh</code>,{" "}
+            <code>elcert_per_mwh</code>, <code>volume_mwh</code>. Values are converted to
+            öre/kWh.
+          </DialogDescription>
+        </DialogHeader>
+        <Textarea
+          rows={10}
+          placeholder='[{"zone":"SE3","avg_purchase_price_per_mwh":580,"pslag_per_mwh":100,"elcert_per_mwh":45,"volume_mwh":1200}, …]'
+          value={json}
+          onChange={(e) => setJson(e.target.value)}
+          className="font-mono text-xs"
+        />
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={applyAll} onCheckedChange={(v) => setApplyAll(!!v)} />
+            Apply to all years
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={updateShare} onCheckedChange={(v) => setUpdateShare(!!v)} />
+            Also update area volume share from <code>volume_mwh</code>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Current share: SE1 {(currentShare.SE1 * 100).toFixed(0)}% · SE2{" "}
+            {(currentShare.SE2 * 100).toFixed(0)}% · SE3 {(currentShare.SE3 * 100).toFixed(0)}%
+            · SE4 {(currentShare.SE4 * 100).toFixed(0)}%
+          </p>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={apply}>Apply</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
