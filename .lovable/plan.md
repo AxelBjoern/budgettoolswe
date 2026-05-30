@@ -1,128 +1,100 @@
 
-# Nordenergi Budget — Enterprise Phase 1
+# Nordenergi Budget — Enterprise Upgrade (Phase 2)
 
-Transform the existing electricity-retail budget into a full enterprise planning platform. Scope per your answers: full P&L + CF + BS, new revenue streams (solar/battery/financing/VPP/SaaS), financing portfolio module, scenario engine with exports, 10-year horizon. Auth/roles/audit deferred. VDNX skipped.
-
-Work is grouped into 5 sequential modules so each lands shippable. I'd recommend confirming Module 1 before I start, then approve each subsequent module as it's built.
+Phase 1 already shipped: 10-year horizon, full P&L / CF / BS statements, revenue streams (solar/battery/VPP/SaaS), financing portfolio, sensitivity tornado, and board pack with Excel/PDF/PPTX exports. This phase closes the remaining gaps from your brief and lifts the whole tool to board-grade polish.
 
 ---
 
-## Module 1 — Foundation: 10-year horizon + financial statements
+## 1 — Global Assumptions Sidebar
 
-**Data model (`src/lib/budget/types.ts`)**
-- Bump default `years` to 10. Add helper to generate `perYear[]` of length 10.
-- New types: `PnLRow`, `CashFlowRow`, `BalanceSheetRow`, `Statements { pnl, cashFlow, balanceSheet }`.
-- Add `Assumptions.opening` (opening balance sheet: cash, AR, AP, equity, debt, fixed assets).
-- Add `Assumptions.taxRate`, `depreciationYears`.
+New left-rail `<AssumptionsSidebar/>` mounted in `_app.tsx`, collapsible (icon-rail when collapsed, matches existing Nordic style).
 
-**Engine (`src/lib/budget/engine.ts`)**
-- Extend `compute()` to derive monthly P&L (gross margin → EBITDA → D&A → EBIT → interest → tax → net income).
-- New `buildStatements(model, assumptions)`: indirect cash flow (NI + D&A ± WC Δ ± financing ± capex) and rolling balance sheet (assets = liabilities + equity check enforced).
-- Working capital drivers: DSO, DPO, inventory days as new assumption fields.
+Grouped accordion sections, each row = label · unit · numeric input · tooltip showing the driver's downstream effect:
+- **Customer growth** — new customers/channel, churn, sales start month, CAC
+- **Pricing & margins** — price/kWh, cost/kWh, certificate, surcharge %, subscription, extras
+- **Solar & Battery** — units/yr, price/unit, COGS %, recurring O&M
+- **VPP / Grid services** — enrolled share, revenue/kW/yr
+- **SaaS** — attach rate, fee/customer/month
+- **Financing** — originations/yr, ticket, term, APR, fees, CoC, default, recovery
+- **Costs** — salaries roster (existing editor), other external, invoicing, loan interest
+- **Working capital & tax** — DSO, DPO, tax rate, depreciation years
+- **Opening balance sheet** — cash, AR, AP, fixed assets, debt, equity
 
-**UI**
-- New route `src/routes/_app/statements.tsx` — three sub-tabs (P&L / Cash Flow / Balance Sheet), monthly + annual toggle, year selector.
-- Topbar nav link "Statements".
-- Reuse existing card/tabular styling.
+Footer: `Reset to default` · `Save as scenario…` · year-scope selector (all years vs single year override).
 
-**Store**
-- Store version bump → `v4-statements`.
-- Migration: pad existing 5-year `perYear` to 10 by repeating last year's zero values.
+All edits route through existing `updateAssumptions` / `updateYear` so engine recomputes live. No new state model.
 
----
+## 2 — Scenario Management Upgrade
 
-## Module 2 — Revenue streams
+- Topbar scenario selector becomes a richer dropdown with **duplicate**, **rename inline**, **delete**, **lock** (read-only badge), and **set as base**.
+- New route `/_app/compare.tsx` — pick 2–4 scenarios, side-by-side annual P&L + KPI strip + overlaid 10y EBITDA / Revenue / Cash line charts with variance-vs-base column.
+- Store: add `compareScenarios: string[]`, `lockedScenarioIds: string[]`, `baseScenarioId`. Bump persisted key to `v7-compare` with defensive migration.
 
-Add as independent revenue modules so each can be turned on/off per scenario.
+## 3 — New Visualizations
 
-**New types** in `Assumptions.revenueStreams`:
-- `solar`: `{ systemsPerYear, avgSystemSizeKw, pricePerKw, costPerKw, installLeadMonths }`
-- `battery`: `{ unitsPerYear, avgKwh, pricePerKwh, costPerKwh }`
-- `vpp`: `{ enrolledShare, revenuePerKwYear }` — derived off installed solar+battery base
-- `saas`: `{ feePerCustomerMonth, attachRate }` — derived off retail customer base
-- Existing electricity retail stays as-is.
+Added to existing Results / Board pages — no new dependencies (Recharts already in):
+- **EBITDA waterfall** — Revenue → COGS → Gross → Opex → D&A → Interest → Tax → Net, year-selectable.
+- **Financing cash bridge** — disbursements (out) vs principal repayments + interest + fees (in) vs cost of funds + losses (out), per year.
+- **Scenario overlay** on Revenue/EBITDA/Customers charts (toggle which scenarios to overlay).
+- Sensitivity page: target-metric selector (10y EBITDA / cumulative CF / ending cash / NPV @ user discount rate).
 
-**Engine**
-- Each stream produces its own monthly income + COGS line.
-- Aggregated into existing `MonthlyRow` via new fields: `solarRevenue/Cost`, `batteryRevenue/Cost`, `vppRevenue`, `saasRevenue`.
+## 4 — Monthly / Annual / 60-Month Tabs + Export
 
-**UI**
-- New tab in `budget.tsx`: "Revenue streams" with collapsible panel per stream.
-- Statements show stream-attributed revenue rows.
+Refactor `/_app/monthly.tsx` and `/_app/results.tsx` into a single `/financials` page with tabs **Monthly | Annual | Full horizon (120 months)**. Each tab has a one-click "Export to Excel" using existing `exports.ts` helpers (extend with `exportTableToXlsx`).
 
----
+## 5 — Board View Polish
 
-## Module 3 — Financing portfolio
+`/_app/board.tsx` already exists. Upgrade:
+- Hero KPI strip: 10y Revenue, EBITDA, EBITDA margin, ending customers, financing outstanding, ending cash, cumulative CFO.
+- "Key risks & sensitivities" panel auto-populated from sensitivity top-3 drivers.
+- Single-screen layout sized for 16:9 screenshot / copy into deck. Print stylesheet so `Cmd-P` produces a clean PDF directly.
+- Existing Excel/PDF/PPTX export buttons stay.
 
-Customer financing (loans/leases) is its own time-series engine — originations roll into a portfolio with amortization.
+## 6 — Audit Log & Versioning
 
-**Types** `Assumptions.financing`:
-- `originationsPerYear[]` (count, avg ticket, term months, APR, default rate, recovery rate)
-- `costOfCapitalPct` (your funding cost)
-- `originationChannelMix` (optional, for CAC attribution)
+Lightweight client-side, no backend:
+- Store appends entries `{ ts, scenarioId, field, oldValue, newValue, source }` on every assumption mutation (cap last 200 per scenario).
+- Topbar shows `v{N} · updated {relative time}`. `N` increments per session change batch (debounced 5s).
+- New `/_app/changelog.tsx` — filterable table by scenario / field / date. "Revert this change" button restores prior value.
 
-**New module `src/lib/budget/financing.ts`**
-- `buildPortfolio(financing, horizon)`: emits per-month cohorts, scheduled principal + interest cash flow, outstanding balance, expected losses, cumulative IRR per cohort.
-- Aggregates feed back into main engine: interest income → P&L revenue; principal funded → cash outflow at origination; repayments → cash inflow; net spread = (APR − cost of capital − loss rate).
+## 7 — Traceability ("why this number?")
 
-**UI** `src/routes/_app/financing.tsx`
-- Cohort table (vintage / originated / outstanding / IRR / loss).
-- Portfolio balance chart over 10 years.
-- Funding requirements summary (net cash need from financing activity).
+- Wrap key KPI numbers in a `<TracedNumber>` component: hover/click opens popover listing the formula and contributing inputs with current values (e.g. `Electricity revenue = active customers × kWh/cust × price/kWh × (1 + surcharge)`).
+- Powered by a small `src/lib/budget/traces.ts` map — no engine changes, just metadata.
 
----
+## 8 — Design & UX
 
-## Module 4 — Scenario engine + sensitivity
-
-**Store**
-- Existing scenarios already exist. Add `compareScenarios: string[]` for side-by-side view.
-- Add `lock: boolean` per scenario (read-only flag, no auth yet).
-
-**New `src/routes/_app/compare.tsx`**
-- Pick 2–4 scenarios → side-by-side annual P&L + KPIs + 10y EBITDA chart.
-- Variance vs Base column.
-
-**New `src/routes/_app/sensitivity.tsx`**
-- Tornado chart: pick a target metric (NPV / 10y EBITDA / cumulative cash) and ±X% sweep over key drivers (price/kWh, churn, CAC, origination volume, cost of capital).
-- Pure recompute — no extra dependency.
-
-**Driver attribution**
-- Add `key-drivers` panel on dashboard: top 5 inputs by metric elasticity.
-
----
-
-## Module 5 — Board pack + exports
-
-**Exports** — all client-side, no backend:
-- **Excel (.xlsx)** via `exceljs` (bun add): one workbook with sheets — Assumptions, P&L, Cash Flow, Balance Sheet, Financing Portfolio, Scenario Compare. Blue for inputs, black formulas style.
-- **PDF** via `jspdf` + `jspdf-autotable`: 1-page exec summary + appendix tables.
-- **PowerPoint (.pptx)** via `pptxgenjs`: 8–10 slide board pack (title, KPIs, P&L trend, cash bridge, financing portfolio, scenario compare, sensitivity tornado, capital plan).
-
-**New route `src/routes/_app/board-pack.tsx`**
-- Select year range, scenario(s), sections to include → "Generate Excel / PDF / PPTX" buttons.
-- Preview pane shows the exec summary view.
+- Refine spacing scale, tighten table density toggle, add `tabular-nums` everywhere monetary.
+- Skeleton loaders on heavy routes (sensitivity recompute, compare view).
+- Smooth route transitions (CSS `view-transition-name`, progressive enhancement only).
+- Tooltip system standardized via existing shadcn `tooltip`.
 
 ---
 
 ## Technical notes
 
-- Pure functions throughout (`engine.ts`, `financing.ts`, `statements.ts`); UI consumes computed model.
-- All state in Zustand store with localStorage persistence; bump version per breaking schema change with a defensive migration that pads/zero-fills missing fields.
-- 10y × 12 months × N scenarios = ~1.2k rows per scenario per stream. Memoize `compute()` per scenario via `useMemo` keyed by assumptions hash.
-- No new backend / Lovable Cloud. Everything client-side.
-- Design language stays: serif headings, `tabular-nums`, `rounded-sm border border-border bg-card`, `ink-shadow`. New charts via existing Recharts (already in shadcn `chart.tsx`).
+- All work client-side, no backend, no Lovable Cloud.
+- Store version `v6-financing` → `v7-enterprise` with one migration that adds `compareScenarios`, `lockedScenarioIds`, `baseScenarioId`, `auditLog`.
+- Engine untouched except for memoization helper (`useComputedModel(scenario)`) to keep compare/sensitivity views fast on 10y × 120mo × N scenarios.
+- New routes: `/compare`, `/changelog`. Existing `/monthly` + `/results` merged into `/financials`.
+- New components: `AssumptionsSidebar`, `ScenarioMenu`, `WaterfallChart`, `FinancingBridge`, `TracedNumber`, `AuditLogTable`.
 
----
+## Out of scope (deferred — confirmed earlier)
 
-## Out of scope (deferred per your answers)
-
-- Auth, roles, approval workflow, audit trail
+- Auth / roles / approval workflow (audit log is local-only)
 - VDNX integration
-- Live ops / asset monitoring
+- Live ops, asset monitoring, customer portal
 - Real-time data feeds
 
 ---
 
-## Suggested sequence
+## Suggested build order
 
-Approve Module 1 first → I build it → verify → approve next. Each module ~self-contained so you can pause/redirect anytime. Want me to start with Module 1 as scoped, or adjust before kicking off?
+1. Store v7 migration + audit log plumbing (foundation for everything)
+2. AssumptionsSidebar + scenario menu upgrade
+3. /compare route + waterfall + financing bridge charts
+4. /financials tab merge + Excel export per tab
+5. Board view polish + traceability popovers
+6. /changelog + design pass
+
+Approve and I'll build top-to-bottom, or call out modules to skip/reorder.
