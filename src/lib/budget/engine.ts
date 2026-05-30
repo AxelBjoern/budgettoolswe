@@ -314,6 +314,9 @@ export function compute(a: Assumptions): ComputedModel {
       yearAgg.loanInterest += loanMonth;
       yearAgg.streamIncome += streamIncome;
       yearAgg.streamCost += streamCost;
+      yearAgg.financingIncome += financingIncome;
+      yearAgg.financingCost += financingCost;
+      yearAgg.financingEndingOutstanding = financingOutstanding;
       for (const sk of STREAM_KEYS) {
         yearAgg.streamsBreakdown[sk].revenue += streamsMonth[sk].revenue;
         yearAgg.streamsBreakdown[sk].cost += streamsMonth[sk].cost;
