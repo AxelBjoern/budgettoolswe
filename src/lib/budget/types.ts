@@ -287,8 +287,6 @@ export interface MonthlyRow {
   // Streams
   streamIncome: number;
   streamCost: number;
-  streamIncome: number;
-  streamCost: number;
   streamsBreakdown?: Record<StreamKey, { revenue: number; cost: number; activeUnits: number }>;
   // Financing
   financingIncome: number;
