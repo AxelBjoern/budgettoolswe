@@ -34,6 +34,14 @@ export interface SalaryRole {
   title: string;
   count: number;
   monthlySalary: number; // SEK / month / person
+  /** First active year (e.g. 2026). Undefined = active from scenario start. */
+  startYear?: number;
+  /** First active month 1..12. Defaults to 1. */
+  startMonth?: number;
+  /** Last active year. Undefined = never ends. */
+  endYear?: number;
+  /** Last active month 1..12. Defaults to 12. */
+  endMonth?: number;
 }
 
 export interface YearAssumptions {
