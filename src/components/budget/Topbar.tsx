@@ -79,8 +79,10 @@ export function Topbar() {
               NORDENERGI
             </div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Budget Terminal · v{version} · {relativeTime(lastUpdated)}
+              Budget Terminal · v{version}
+              {mounted ? ` · ${relativeTime(lastUpdated)}` : ""}
             </div>
+
           </div>
         </Link>
 
