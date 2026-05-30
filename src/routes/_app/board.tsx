@@ -106,7 +106,13 @@ function BoardPage() {
         title="Board Pack"
         subtitle={`Horizon ${model.yearly[0].year}–${model.yearly[model.yearly.length - 1].year} · Scenario · ${scenario.name}`}
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 no-print">
+            <ExportButton
+              label="Print"
+              icon={Printer}
+              busy={false}
+              onClick={() => window.print()}
+            />
             <ExportButton
               label="Excel"
               icon={FileSpreadsheet}
@@ -126,6 +132,7 @@ function BoardPage() {
               onClick={() => run("pptx")}
             />
           </div>
+
         }
       />
 
