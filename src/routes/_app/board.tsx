@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { FileSpreadsheet, FileText, Presentation, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Presentation, Loader2, Printer, AlertTriangle } from "lucide-react";
 import { useActiveScenario } from "@/lib/budget/store";
 import { compute } from "@/lib/budget/engine";
 import {
@@ -23,12 +23,14 @@ import {
   exportPDF,
   exportPPTX,
 } from "@/lib/budget/exports";
+import { buildSensitivity } from "@/lib/budget/sensitivity";
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { KpiCard } from "@/components/budget/KpiCard";
 import { Button } from "@/components/ui/button";
 import { fmtSEK, fmtNum, fmtPct } from "@/lib/budget/format";
 import { EbitdaWaterfall, FinancingBridge } from "@/components/budget/BridgeCharts";
 import { useBudgetStore } from "@/lib/budget/store";
+
 
 export const Route = createFileRoute("/_app/board")({
   head: () => ({
