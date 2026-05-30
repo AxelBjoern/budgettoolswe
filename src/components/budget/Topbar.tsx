@@ -123,7 +123,7 @@ export function Topbar() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2026, 2027, 2028, 2029, 2030].map((y) => (
+                {Array.from({ length: 10 }, (_, i) => 2026 + i).map((y) => (
                   <SelectItem key={y} value={String(y)}>
                     {y}
                   </SelectItem>
