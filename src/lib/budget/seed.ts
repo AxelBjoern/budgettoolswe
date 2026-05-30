@@ -57,16 +57,52 @@ function yearAssumptions(scale: number, starting: number): YearAssumptions {
 // Customer ramp: ~6,700 new/yr, 12% churn → climbing book of business.
 // Starting customer count grows year over year as the engine actually computes,
 // but we still seed an initial value for year 0.
+const zeroChannels = (): Record<ChannelKey, number> => ({
+  internet: 0,
+  telephone: 0,
+  print: 0,
+  collaborations: 0,
+  tellAFriend: 0,
+  fairs: 0,
+  other: 0,
+});
+
+function zeroYear(): YearAssumptions {
+  return {
+    newCustomersByChannel: zeroChannels(),
+    churnRate: 0,
+    acquisitionCostPerCustomer: 0,
+    kwhPerCustomerYear: 0,
+    subscriptionPerCustomerYear: 0,
+    pricePerKwh: 0,
+    costPerKwh: 0,
+    certificateCostPerKwh: 0,
+    surchargePct: 0,
+    extraServicesPerCustomerYear: 0,
+    otherExternalExpenses: 0,
+    socialFeesPct: 0.3142,
+    loanInterest: 0,
+    invoicingCostPerCustomer: 0,
+    salaries: [],
+    priceAreaShare: { SE1: 0.25, SE2: 0.25, SE3: 0.25, SE4: 0.25 },
+    startingCustomers: 0,
+    priceAreaPricing: {
+      SE1: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+      SE2: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+      SE3: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+      SE4: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
+    },
+    useAreaPricing: false,
+  };
+}
+
+void yearAssumptions;
+void baseSalaries;
+
 export const SEED_ASSUMPTIONS: Assumptions = {
   startYear: 2026,
   years: 5,
   vatRate: 0.25,
   salesAppreciationPct: 0,
-  perYear: [
-    yearAssumptions(1.0, 1200),
-    yearAssumptions(1.1, 0), // engine will use computed end-of-prior-year
-    yearAssumptions(1.15, 0),
-    yearAssumptions(1.15, 0),
-    yearAssumptions(1.1, 0),
-  ],
+  perYear: [zeroYear(), zeroYear(), zeroYear(), zeroYear(), zeroYear()],
 };
