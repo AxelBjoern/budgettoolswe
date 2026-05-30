@@ -17,6 +17,8 @@ import { Route as AppScenariosRouteImport } from './routes/_app/scenarios'
 import { Route as AppResultsRouteImport } from './routes/_app/results'
 import { Route as AppMonthlyRouteImport } from './routes/_app/monthly'
 import { Route as AppFinancingRouteImport } from './routes/_app/financing'
+import { Route as AppCompareRouteImport } from './routes/_app/compare'
+import { Route as AppChangelogRouteImport } from './routes/_app/changelog'
 import { Route as AppBudgetRouteImport } from './routes/_app/budget'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
 
@@ -59,6 +61,16 @@ const AppFinancingRoute = AppFinancingRouteImport.update({
   path: '/financing',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCompareRoute = AppCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChangelogRoute = AppChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBudgetRoute = AppBudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
@@ -74,6 +86,8 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/board': typeof AppBoardRoute
   '/budget': typeof AppBudgetRoute
+  '/changelog': typeof AppChangelogRoute
+  '/compare': typeof AppCompareRoute
   '/financing': typeof AppFinancingRoute
   '/monthly': typeof AppMonthlyRoute
   '/results': typeof AppResultsRoute
@@ -84,6 +98,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/board': typeof AppBoardRoute
   '/budget': typeof AppBudgetRoute
+  '/changelog': typeof AppChangelogRoute
+  '/compare': typeof AppCompareRoute
   '/financing': typeof AppFinancingRoute
   '/monthly': typeof AppMonthlyRoute
   '/results': typeof AppResultsRoute
@@ -97,6 +113,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_app/board': typeof AppBoardRoute
   '/_app/budget': typeof AppBudgetRoute
+  '/_app/changelog': typeof AppChangelogRoute
+  '/_app/compare': typeof AppCompareRoute
   '/_app/financing': typeof AppFinancingRoute
   '/_app/monthly': typeof AppMonthlyRoute
   '/_app/results': typeof AppResultsRoute
@@ -111,6 +129,8 @@ export interface FileRouteTypes {
     | '/'
     | '/board'
     | '/budget'
+    | '/changelog'
+    | '/compare'
     | '/financing'
     | '/monthly'
     | '/results'
@@ -121,6 +141,8 @@ export interface FileRouteTypes {
   to:
     | '/board'
     | '/budget'
+    | '/changelog'
+    | '/compare'
     | '/financing'
     | '/monthly'
     | '/results'
@@ -133,6 +155,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_app/board'
     | '/_app/budget'
+    | '/_app/changelog'
+    | '/_app/compare'
     | '/_app/financing'
     | '/_app/monthly'
     | '/_app/results'
@@ -204,6 +228,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFinancingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/compare': {
+      id: '/_app/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof AppCompareRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/changelog': {
+      id: '/_app/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof AppChangelogRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/budget': {
       id: '/_app/budget'
       path: '/budget'
@@ -224,6 +262,8 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppBoardRoute: typeof AppBoardRoute
   AppBudgetRoute: typeof AppBudgetRoute
+  AppChangelogRoute: typeof AppChangelogRoute
+  AppCompareRoute: typeof AppCompareRoute
   AppFinancingRoute: typeof AppFinancingRoute
   AppMonthlyRoute: typeof AppMonthlyRoute
   AppResultsRoute: typeof AppResultsRoute
@@ -236,6 +276,8 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppBoardRoute: AppBoardRoute,
   AppBudgetRoute: AppBudgetRoute,
+  AppChangelogRoute: AppChangelogRoute,
+  AppCompareRoute: AppCompareRoute,
   AppFinancingRoute: AppFinancingRoute,
   AppMonthlyRoute: AppMonthlyRoute,
   AppResultsRoute: AppResultsRoute,
@@ -253,3 +295,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
