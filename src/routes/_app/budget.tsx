@@ -5,7 +5,7 @@ import { compute } from "@/lib/budget/engine";
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { KpiCard } from "@/components/budget/KpiCard";
 import { fmtSEK, fmtNum, fmtPct } from "@/lib/budget/format";
-import { CHANNELS, type ChannelKey, type PriceAreaKey } from "@/lib/budget/types";
+import { CHANNELS, STREAMS, type ChannelKey, type PriceAreaKey, type StreamAssumptions, type StreamKey } from "@/lib/budget/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -184,6 +184,7 @@ function BudgetTool() {
           <TabsTrigger value="pricing" className="rounded-sm text-xs uppercase tracking-wider">Pricing</TabsTrigger>
           <TabsTrigger value="costs" className="rounded-sm text-xs uppercase tracking-wider">Costs</TabsTrigger>
           <TabsTrigger value="salaries" className="rounded-sm text-xs uppercase tracking-wider">Salaries</TabsTrigger>
+          <TabsTrigger value="streams" className="rounded-sm text-xs uppercase tracking-wider">Streams</TabsTrigger>
           <TabsTrigger value="areas" className="rounded-sm text-xs uppercase tracking-wider">Price areas</TabsTrigger>
         </TabsList>
 
