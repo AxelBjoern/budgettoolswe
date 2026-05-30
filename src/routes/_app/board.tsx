@@ -26,7 +26,9 @@ import {
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { KpiCard } from "@/components/budget/KpiCard";
 import { Button } from "@/components/ui/button";
-import { fmtSEK, fmtNum } from "@/lib/budget/format";
+import { fmtSEK, fmtNum, fmtPct } from "@/lib/budget/format";
+import { EbitdaWaterfall, FinancingBridge } from "@/components/budget/BridgeCharts";
+import { useBudgetStore } from "@/lib/budget/store";
 
 export const Route = createFileRoute("/_app/board")({
   head: () => ({
