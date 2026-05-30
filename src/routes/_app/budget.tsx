@@ -15,8 +15,22 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Download } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RotateCcw, Download, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
+import { fmtSekPerKwh } from "@/lib/budget/format";
+import type { AreaPricing } from "@/lib/budget/types";
 
 export const Route = createFileRoute("/_app/budget")({
   head: () => ({
