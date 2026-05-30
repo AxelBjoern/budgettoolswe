@@ -59,8 +59,10 @@ function BoardPage() {
   const bridgeYear =
     model.yearly.find((y) => y.year === selectedYear) ?? model.yearly[model.yearly.length - 1];
 
-  const lastCF = model.statements.cashFlow[model.statements.cashFlow.length - 1];
-  const cumulativeCFO = model.statements.cashFlow.reduce((a, r) => a + r.cfo, 0);
+  const statements = useMemo(() => buildStatements(model, scenario.assumptions), [model, scenario]);
+  const lastCF = statements.cashFlow[statements.cashFlow.length - 1];
+  const cumulativeCFO = statements.cashFlow.reduce((a, r) => a + r.cfo, 0);
+
   const horizon = {
     revenue: model.yearly.reduce((a, y) => a + y.totalIncome, 0),
     ebitda: model.yearly.reduce((a, y) => a + y.ebitda, 0),
