@@ -146,6 +146,66 @@ export interface Assumptions {
   dpo?: number;
   /** Opening balance sheet (period 0). */
   opening?: OpeningBalance;
+  /** Financing portfolio (loan/lease originations). */
+  financing?: FinancingAssumptions;
+}
+
+export interface FinancingAssumptions {
+  enabled: boolean;
+  /** New originations per year. Indexed by year offset (0..years-1). */
+  originationsPerYear: number[];
+  /** Average principal per loan (SEK). */
+  avgPrincipal: number;
+  /** Loan term in months (straight-line principal repayment). */
+  termMonths: number;
+  /** Customer APR (annual, 0..1). */
+  customerAPR: number;
+  /** Origination fee as fraction of principal (0..1), recognised at disbursement. */
+  originationFeePct: number;
+  /** Internal cost of capital (annual, 0..1). */
+  costOfCapitalPct: number;
+  /** Annual default rate on outstanding (0..1). */
+  defaultAnnualPct: number;
+  /** Recovery rate on defaulted balance (0..1). */
+  recoveryPct: number;
+  /** Opening portfolio outstanding (SEK). */
+  openingOutstanding?: number;
+}
+
+export interface FinancingMonthRow {
+  year: number;
+  month: number;
+  newOriginations: number;
+  disbursed: number;
+  principalRepaid: number;
+  defaultLoss: number;
+  outstanding: number;
+  interestIncome: number;
+  originationFees: number;
+  costOfFunds: number;
+  netInterestMargin: number;
+  totalIncome: number;
+  totalCost: number;
+}
+
+export interface FinancingYearRow {
+  year: number;
+  newOriginations: number;
+  disbursed: number;
+  principalRepaid: number;
+  defaultLoss: number;
+  endingOutstanding: number;
+  interestIncome: number;
+  originationFees: number;
+  costOfFunds: number;
+  totalIncome: number;
+  totalCost: number;
+  netMargin: number;
+}
+
+export interface FinancingResult {
+  monthly: FinancingMonthRow[];
+  yearly: FinancingYearRow[];
 }
 
 /** Period in P&L / Cash Flow / Balance Sheet output. */
