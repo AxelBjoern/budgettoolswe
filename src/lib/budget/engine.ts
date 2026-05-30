@@ -12,12 +12,24 @@ import type {
   PriceAreaKey,
   SalaryRole,
   Statements,
+  StreamAssumptions,
+  StreamKey,
   YearAssumptions,
   YearlyRow,
   ChannelKey,
 } from "./types";
 
 const PRICE_AREAS: PriceAreaKey[] = ["SE1", "SE2", "SE3", "SE4"];
+const STREAM_KEYS: StreamKey[] = ["solar", "battery", "vpp", "saas"];
+
+function emptyStreamBreakdown<T extends { revenue: number; cost: number }>(extra: (k: StreamKey) => T): Record<StreamKey, T> {
+  return {
+    solar: extra("solar"),
+    battery: extra("battery"),
+    vpp: extra("vpp"),
+    saas: extra("saas"),
+  };
+}
 
 function sumChannels(by: Record<ChannelKey, number>): number {
   return Object.values(by).reduce((a, b) => a + b, 0);
