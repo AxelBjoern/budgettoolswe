@@ -117,12 +117,17 @@ function BoardPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
         <KpiCard label="Horizon revenue" value={fmtSEK(horizon.revenue, { compact: true })} />
         <KpiCard
           label="Horizon EBITDA"
           value={fmtSEK(horizon.ebitda, { compact: true })}
           tone={horizon.ebitda >= 0 ? "positive" : "negative"}
+        />
+        <KpiCard
+          label="EBITDA margin"
+          value={fmtPct(margin)}
+          tone={margin >= 0 ? "positive" : "negative"}
         />
         <KpiCard
           label="Horizon cash flow"
@@ -133,6 +138,15 @@ function BoardPage() {
         <KpiCard label="Stream revenue" value={fmtSEK(horizon.streamRev, { compact: true })} />
         <KpiCard label="Financing outstanding" value={fmtSEK(horizon.financingOut, { compact: true })} />
       </div>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <ChartFrame title={`EBITDA bridge · ${bridgeYear.year}`}>
+          <EbitdaWaterfall yearly={bridgeYear} />
+        </ChartFrame>
+        <ChartFrame title={`Financing margin bridge · ${bridgeYear.year}`}>
+          <FinancingBridge yearly={bridgeYear} />
+        </ChartFrame>
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <ChartFrame title="Revenue & EBITDA">
