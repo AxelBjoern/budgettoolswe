@@ -15,12 +15,14 @@ import {
   CalendarRange,
   GitCompare,
   ClipboardList,
+  FileBarChart,
 } from "lucide-react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/budget", label: "Budget", icon: Sliders },
   { to: "/monthly", label: "Monthly", icon: CalendarRange },
+  { to: "/statements", label: "Statements", icon: FileBarChart },
   { to: "/results", label: "Results", icon: ClipboardList },
   { to: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;
