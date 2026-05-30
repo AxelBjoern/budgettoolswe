@@ -224,12 +224,18 @@ export function compute(a: Assumptions): ComputedModel {
         streamActive[sk] = endU;
       }
 
+      const fin = finByKey.get(`${yearLabel}-${m}`);
+      const financingIncome = fin?.totalIncome ?? 0;
+      const financingCost = fin?.totalCost ?? 0;
+      const financingOutstanding = fin?.outstanding ?? 0;
+
       const totalIncome =
         electricityIncome +
         certificateIncome +
         extraServicesIncome +
         subscriptionIncome +
-        streamIncome;
+        streamIncome +
+        financingIncome;
 
       const totalCost =
         electricityCost +
@@ -239,7 +245,8 @@ export function compute(a: Assumptions): ComputedModel {
         salaryMonth +
         otherExtMonth +
         loanMonth +
-        streamCost;
+        streamCost +
+        financingCost;
 
       const ebitda = totalIncome - totalCost + loanMonth; // EBITDA before interest
       const cashFlow = totalIncome - totalCost;
@@ -277,6 +284,9 @@ export function compute(a: Assumptions): ComputedModel {
         streamIncome,
         streamCost,
         streamsBreakdown: streamsMonth,
+        financingIncome,
+        financingCost,
+        financingOutstanding,
         ebitda,
         cashFlow,
         vatOut,
