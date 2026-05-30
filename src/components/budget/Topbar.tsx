@@ -57,6 +57,16 @@ export function Topbar() {
   const setContractStartDate = useBudgetStore((s) => s.setContractStartDate);
   const scenario = useActiveScenario();
 
+  const [mounted, setMounted] = useState(false);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    setMounted(true);
+    const id = setInterval(() => tick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+
+
   return (
     <header className="border-b border-border bg-card/60 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-6 py-3">
