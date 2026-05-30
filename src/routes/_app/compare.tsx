@@ -287,8 +287,6 @@ function ComparePage() {
           </section>
         </>
       )}
-      {/* unused cell import guard */}
-      <Cell />
     </div>
   );
 }
