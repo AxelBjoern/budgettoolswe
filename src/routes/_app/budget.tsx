@@ -189,6 +189,27 @@ function BudgetTool() {
 
         <TabsContent value="customers" className="mt-4">
           <Panel title="Acquisition by channel">
+            <div className="mb-3 flex items-center gap-3 border-b border-border pb-3">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Sales start month
+              </Label>
+              <select
+                value={ya.salesStartMonth ?? 1}
+                onChange={(e) =>
+                  patch({ salesStartMonth: Number(e.target.value) })
+                }
+                className="h-8 rounded-sm border border-border bg-background px-2 text-xs tabular-nums"
+              >
+                {[1,2,3,4,5,6,7,8,9,10,11,12].map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2000, m - 1, 1).toLocaleString("en", { month: "short" })} ({m})
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-muted-foreground">
+                New customers and acquisition cost start in this month of {yearLabel}.
+              </span>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {CHANNELS.map((c) => (
                 <FieldNum
@@ -219,6 +240,7 @@ function BudgetTool() {
             </div>
           </Panel>
         </TabsContent>
+
 
         <TabsContent value="pricing" className="mt-4">
           <Panel title="Energy pricing">
