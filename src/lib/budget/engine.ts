@@ -2,10 +2,12 @@
 // Takes Assumptions, returns monthly + yearly aggregates.
 
 import type {
+  Actuals,
   Assumptions,
   ComputedModel,
   MonthlyRow,
   PriceAreaKey,
+  SalaryRole,
   YearAssumptions,
   YearlyRow,
   ChannelKey,
@@ -17,12 +19,34 @@ function sumChannels(by: Record<ChannelKey, number>): number {
   return Object.values(by).reduce((a, b) => a + b, 0);
 }
 
-function yearlySalaryCost(y: YearAssumptions): number {
-  const monthly = y.salaries.reduce(
-    (acc, r) => acc + r.count * r.monthlySalary,
-    0,
-  );
-  return monthly * 12 * (1 + y.socialFeesPct);
+/** Returns true when role is active in the given (year, month). */
+function roleActive(
+  r: SalaryRole,
+  startYear: number,
+  year: number,
+  month: number,
+): boolean {
+  const sY = r.startYear ?? startYear;
+  const sM = r.startMonth ?? 1;
+  const eY = r.endYear;
+  const eM = r.endMonth ?? 12;
+  const ymKey = year * 12 + month;
+  if (ymKey < sY * 12 + sM) return false;
+  if (eY != null && ymKey > eY * 12 + eM) return false;
+  return true;
+}
+
+function monthlySalaryCost(
+  y: YearAssumptions,
+  startYear: number,
+  year: number,
+  month: number,
+): number {
+  const base = y.salaries.reduce((acc, r) => {
+    if (!roleActive(r, startYear, year, month)) return acc;
+    return acc + r.count * r.monthlySalary;
+  }, 0);
+  return base * (1 + y.socialFeesPct);
 }
 
 export function compute(a: Assumptions): ComputedModel {
@@ -30,25 +54,28 @@ export function compute(a: Assumptions): ComputedModel {
   const yearly: YearlyRow[] = [];
 
   let runningStart = a.perYear[0].startingCustomers;
+  const appreciation = a.salesAppreciationPct ?? 0;
 
   for (let y = 0; y < a.years; y++) {
     const ya = a.perYear[y];
     const yearStartCustomers = y === 0 ? ya.startingCustomers : runningStart;
+    const yearLabel = a.startYear + y;
+    const sellMult = Math.pow(1 + appreciation, y);
 
     const newCustomersYear = sumChannels(ya.newCustomersByChannel);
-    const newPerMonth = newCustomersYear / 12;
+    const salesStartMonth = Math.min(12, Math.max(1, ya.salesStartMonth ?? 1));
+    const activeMonths = 12 - (salesStartMonth - 1);
+    const newPerMonth = activeMonths > 0 ? newCustomersYear / activeMonths : 0;
     const monthlyChurnRate = 1 - Math.pow(1 - ya.churnRate, 1 / 12);
 
-    const salaryYear = yearlySalaryCost(ya);
     const otherExtMonth = ya.otherExternalExpenses / 12;
-    const salaryMonth = salaryYear / 12;
     const loanMonth = ya.loanInterest / 12;
     const salesCostYear = newCustomersYear * ya.acquisitionCostPerCustomer;
-    const salesMonth = salesCostYear / 12;
+    const salesPerActiveMonth = activeMonths > 0 ? salesCostYear / activeMonths : 0;
 
     let active = yearStartCustomers;
-    let yearAgg: YearlyRow = {
-      year: a.startYear + y,
+    const yearAgg: YearlyRow = {
+      year: yearLabel,
       startingCustomers: yearStartCustomers,
       endingCustomers: 0,
       newCustomers: 0,
@@ -77,10 +104,14 @@ export function compute(a: Assumptions): ComputedModel {
 
     for (let m = 1; m <= 12; m++) {
       const startCust = active;
-      const newCust = newPerMonth;
+      const isSalesActive = m >= salesStartMonth;
+      const newCust = isSalesActive ? newPerMonth : 0;
+      const salesMonth = isSalesActive ? salesPerActiveMonth : 0;
       const churned = (startCust + newCust / 2) * monthlyChurnRate;
       const endCust = startCust + newCust - churned;
       const avgCust = (startCust + endCust) / 2;
+
+      const salaryMonth = monthlySalaryCost(ya, a.startYear, yearLabel, m);
 
       const kwhMonth = (avgCust * ya.kwhPerCustomerYear) / 12;
 
@@ -96,7 +127,7 @@ export function compute(a: Assumptions): ComputedModel {
         for (const k of PRICE_AREAS) {
           const p = ya.priceAreaPricing![k];
           const kwhArea = kwhMonth * ya.priceAreaShare[k];
-          const sellSEK = (p.avgPurchaseOre + p.pslagOre) / 100;
+          const sellSEK = ((p.avgPurchaseOre + p.pslagOre) / 100) * sellMult;
           const costSEK = p.avgPurchaseOre / 100;
           const certSEK = p.elcertOre / 100;
           const eIncA = kwhArea * sellSEK * (1 + ya.surchargePct);
@@ -111,16 +142,17 @@ export function compute(a: Assumptions): ComputedModel {
           monthCogsByArea[k] = eCostA + cCostA;
         }
       } else {
-        electricityIncome = kwhMonth * ya.pricePerKwh * (1 + ya.surchargePct);
+        electricityIncome =
+          kwhMonth * ya.pricePerKwh * sellMult * (1 + ya.surchargePct);
         certificateIncome = kwhMonth * ya.certificateCostPerKwh;
         electricityCost = kwhMonth * ya.costPerKwh;
         certificateCost = kwhMonth * ya.certificateCostPerKwh;
       }
 
       const extraServicesIncome =
-        (avgCust * ya.extraServicesPerCustomerYear) / 12;
+        (avgCust * ya.extraServicesPerCustomerYear * sellMult) / 12;
       const subscriptionIncome =
-        (avgCust * ya.subscriptionPerCustomerYear) / 12;
+        (avgCust * ya.subscriptionPerCustomerYear * sellMult) / 12;
       const totalIncome =
         electricityIncome +
         certificateIncome +
@@ -151,7 +183,7 @@ export function compute(a: Assumptions): ComputedModel {
         a.vatRate;
 
       const row: MonthlyRow = {
-        year: a.startYear + y,
+        year: yearLabel,
         month: m,
         startingCustomers: Math.round(startCust),
         newCustomers: Math.round(newCust),
@@ -178,7 +210,6 @@ export function compute(a: Assumptions): ComputedModel {
       };
       monthly.push(row);
 
-      // Aggregate
       yearAgg.newCustomers += newCust;
       yearAgg.churnedCustomers += churned;
       yearAgg.totalIncome += totalIncome;
@@ -226,4 +257,100 @@ export function kpiForYear(model: ComputedModel, year: number) {
     cac: y.cac,
     churn: y.churnRate,
   };
+}
+
+// ---------- Results / Actuals ----------
+
+export interface ResultRow {
+  month: number;
+  budget: {
+    customers: number;
+    income: number;
+    cost: number;
+    ebitda: number;
+  };
+  actual: {
+    customers?: number;
+    income?: number;
+    cost?: number;
+    ebitda?: number;
+  };
+  variance: {
+    customers?: number;
+    income?: number;
+    cost?: number;
+    ebitda?: number;
+  };
+}
+
+export interface ResultsSummary {
+  rows: ResultRow[];
+  ytdBudget: { income: number; cost: number; ebitda: number };
+  ytdActual: { income: number; cost: number; ebitda: number };
+  latestCustomers?: { month: number; value: number };
+}
+
+export function buildResults(
+  model: ComputedModel,
+  actuals: Actuals | undefined,
+  year: number,
+): ResultsSummary {
+  const months = model.monthly.filter((m) => m.year === year);
+  const map = new Map<number, NonNullable<Actuals>["rows"][number]>();
+  for (const r of actuals?.rows ?? []) {
+    if (r.year === year) map.set(r.month, r);
+  }
+
+  const rows: ResultRow[] = months.map((m) => {
+    const a = map.get(m.month);
+    const aIncome = a?.totalIncome;
+    const aCost = a?.totalCost;
+    const aEbitda =
+      aIncome != null && aCost != null ? aIncome - aCost : undefined;
+    return {
+      month: m.month,
+      budget: {
+        customers: m.endingCustomers,
+        income: m.totalIncome,
+        cost: m.totalCost,
+        ebitda: m.ebitda,
+      },
+      actual: {
+        customers: a?.customers,
+        income: aIncome,
+        cost: aCost,
+        ebitda: aEbitda,
+      },
+      variance: {
+        customers:
+          a?.customers != null ? a.customers - m.endingCustomers : undefined,
+        income: aIncome != null ? aIncome - m.totalIncome : undefined,
+        cost: aCost != null ? aCost - m.totalCost : undefined,
+        ebitda: aEbitda != null ? aEbitda - m.ebitda : undefined,
+      },
+    };
+  });
+
+  const ytdBudget = { income: 0, cost: 0, ebitda: 0 };
+  const ytdActual = { income: 0, cost: 0, ebitda: 0 };
+  let latestCustomers: ResultsSummary["latestCustomers"];
+  for (const r of rows) {
+    if (r.actual.income != null) {
+      ytdBudget.income += r.budget.income;
+      ytdActual.income += r.actual.income;
+    }
+    if (r.actual.cost != null) {
+      ytdBudget.cost += r.budget.cost;
+      ytdActual.cost += r.actual.cost;
+    }
+    if (r.actual.ebitda != null) {
+      ytdBudget.ebitda += r.budget.ebitda;
+      ytdActual.ebitda += r.actual.ebitda;
+    }
+    if (r.actual.customers != null) {
+      latestCustomers = { month: r.month, value: r.actual.customers };
+    }
+  }
+
+  return { rows, ytdBudget, ytdActual, latestCustomers };
 }
