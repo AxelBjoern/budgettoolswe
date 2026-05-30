@@ -122,6 +122,13 @@ function BudgetTool() {
                   salaries: ya.salaries.map((r) => ({ ...r, title: r.title, count: 1, monthlySalary: 1 })),
                   priceAreaShare: { SE1: 1, SE2: 1, SE3: 1, SE4: 1 },
                   startingCustomers: 1,
+                  priceAreaPricing: {
+                    SE1: { avgPurchaseOre: 1, pslagOre: 1, elcertOre: 1 },
+                    SE2: { avgPurchaseOre: 1, pslagOre: 1, elcertOre: 1 },
+                    SE3: { avgPurchaseOre: 1, pslagOre: 1, elcertOre: 1 },
+                    SE4: { avgPurchaseOre: 1, pslagOre: 1, elcertOre: 1 },
+                  },
+                  useAreaPricing: ya.useAreaPricing ?? false,
                 };
                 for (let i = 0; i < scenario.assumptions.perYear.length; i++) {
                   updateYear(scenario.id, i, one);
