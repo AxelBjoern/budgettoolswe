@@ -115,6 +115,7 @@ function zeroYear(): YearAssumptions {
       SE4: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
     },
     useAreaPricing: false,
+    streams: zeroStreams(),
   };
 }
 
