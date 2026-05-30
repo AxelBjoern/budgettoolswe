@@ -1,7 +1,29 @@
 // Seed assumptions extracted/derived from "Budget demo energi version 1.xlsx".
 // Year horizon shifted to 2026–2030.
 
-import type { Assumptions, YearAssumptions, ChannelKey } from "./types";
+import type { Assumptions, YearAssumptions, ChannelKey, StreamKey, StreamAssumptions } from "./types";
+
+function zeroStream(): StreamAssumptions {
+  return {
+    enabled: false,
+    newUnitsPerYear: 0,
+    oneTimeRevenuePerUnit: 0,
+    oneTimeCogsPct: 0,
+    recurringMonthlyPerUnit: 0,
+    recurringCogsPct: 0,
+    annualChurnPct: 0,
+    startingUnits: 0,
+  };
+}
+
+function zeroStreams(): Record<StreamKey, StreamAssumptions> {
+  return {
+    solar: zeroStream(),
+    battery: zeroStream(),
+    vpp: zeroStream(),
+    saas: zeroStream(),
+  };
+}
 
 const baseChannels = (scale: number): Record<ChannelKey, number> => ({
   internet: Math.round(2400 * scale),
@@ -93,6 +115,7 @@ function zeroYear(): YearAssumptions {
       SE4: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
     },
     useAreaPricing: false,
+    streams: zeroStreams(),
   };
 }
 

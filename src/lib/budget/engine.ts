@@ -12,12 +12,24 @@ import type {
   PriceAreaKey,
   SalaryRole,
   Statements,
+  StreamAssumptions,
+  StreamKey,
   YearAssumptions,
   YearlyRow,
   ChannelKey,
 } from "./types";
 
 const PRICE_AREAS: PriceAreaKey[] = ["SE1", "SE2", "SE3", "SE4"];
+const STREAM_KEYS: StreamKey[] = ["solar", "battery", "vpp", "saas"];
+
+function emptyStreamBreakdown<T extends { revenue: number; cost: number }>(extra: (k: StreamKey) => T): Record<StreamKey, T> {
+  return {
+    solar: extra("solar"),
+    battery: extra("battery"),
+    vpp: extra("vpp"),
+    saas: extra("saas"),
+  };
+}
 
 function sumChannels(by: Record<ChannelKey, number>): number {
   return Object.values(by).reduce((a, b) => a + b, 0);
@@ -59,6 +71,15 @@ export function compute(a: Assumptions): ComputedModel {
 
   let runningStart = a.perYear[0].startingCustomers;
   const appreciation = a.salesAppreciationPct ?? 0;
+
+  // Carry per-stream active units across years.
+  const streamActive: Record<StreamKey, number> = {
+    solar: a.perYear[0].streams?.solar?.startingUnits ?? 0,
+    battery: a.perYear[0].streams?.battery?.startingUnits ?? 0,
+    vpp: a.perYear[0].streams?.vpp?.startingUnits ?? 0,
+    saas: a.perYear[0].streams?.saas?.startingUnits ?? 0,
+  };
+
 
   for (let y = 0; y < a.years; y++) {
     const ya = a.perYear[y];
@@ -104,6 +125,9 @@ export function compute(a: Assumptions): ComputedModel {
       volumeByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
       revenueByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
       cogsByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
+      streamIncome: 0,
+      streamCost: 0,
+      streamsBreakdown: emptyStreamBreakdown((k) => ({ revenue: 0, cost: 0, endingUnits: streamActive[k] })),
     };
 
     for (let m = 1; m <= 12; m++) {
@@ -157,13 +181,43 @@ export function compute(a: Assumptions): ComputedModel {
         (avgCust * ya.extraServicesPerCustomerYear * sellMult) / 12;
       const subscriptionIncome =
         (avgCust * ya.subscriptionPerCustomerYear * sellMult) / 12;
+
+      const invoicingCost = (avgCust * ya.invoicingCostPerCustomer) / 12;
+
+      // -------- Revenue streams (solar / battery / VPP / SaaS) --------
+      let streamIncome = 0;
+      let streamCost = 0;
+      const streamsMonth: Record<StreamKey, { revenue: number; cost: number; activeUnits: number }> = emptyStreamBreakdown((k) => ({ revenue: 0, cost: 0, activeUnits: streamActive[k] }));
+      for (const sk of STREAM_KEYS) {
+        const s: StreamAssumptions | undefined = ya.streams?.[sk];
+        if (!s || !s.enabled) {
+          streamsMonth[sk] = { revenue: 0, cost: 0, activeUnits: streamActive[sk] };
+          continue;
+        }
+        const newU = s.newUnitsPerYear / 12;
+        const mChurn = s.annualChurnPct > 0 ? 1 - Math.pow(1 - s.annualChurnPct, 1 / 12) : 0;
+        const startU = streamActive[sk];
+        const churnU = (startU + newU / 2) * mChurn;
+        const endU = startU + newU - churnU;
+        const avgU = (startU + endU) / 2;
+        const oneTimeRev = newU * s.oneTimeRevenuePerUnit;
+        const oneTimeCost = oneTimeRev * s.oneTimeCogsPct;
+        const recRev = avgU * s.recurringMonthlyPerUnit;
+        const recCost = recRev * s.recurringCogsPct;
+        const rev = oneTimeRev + recRev;
+        const cost = oneTimeCost + recCost;
+        streamsMonth[sk] = { revenue: rev, cost, activeUnits: endU };
+        streamIncome += rev;
+        streamCost += cost;
+        streamActive[sk] = endU;
+      }
+
       const totalIncome =
         electricityIncome +
         certificateIncome +
         extraServicesIncome +
-        subscriptionIncome;
-
-      const invoicingCost = (avgCust * ya.invoicingCostPerCustomer) / 12;
+        subscriptionIncome +
+        streamIncome;
 
       const totalCost =
         electricityCost +
@@ -172,7 +226,8 @@ export function compute(a: Assumptions): ComputedModel {
         salesMonth +
         salaryMonth +
         otherExtMonth +
-        loanMonth;
+        loanMonth +
+        streamCost;
 
       const ebitda = totalIncome - totalCost + loanMonth; // EBITDA before interest
       const cashFlow = totalIncome - totalCost;
@@ -183,7 +238,8 @@ export function compute(a: Assumptions): ComputedModel {
           certificateCost +
           invoicingCost +
           otherExtMonth +
-          salesMonth) *
+          salesMonth +
+          streamCost) *
         a.vatRate;
 
       const row: MonthlyRow = {
@@ -206,6 +262,9 @@ export function compute(a: Assumptions): ComputedModel {
         otherExternal: otherExtMonth,
         loanInterest: loanMonth,
         totalCost,
+        streamIncome,
+        streamCost,
+        streamsBreakdown: streamsMonth,
         ebitda,
         cashFlow,
         vatOut,
@@ -231,6 +290,13 @@ export function compute(a: Assumptions): ComputedModel {
       yearAgg.otherExternal += otherExtMonth;
       yearAgg.invoicingCost += invoicingCost;
       yearAgg.loanInterest += loanMonth;
+      yearAgg.streamIncome += streamIncome;
+      yearAgg.streamCost += streamCost;
+      for (const sk of STREAM_KEYS) {
+        yearAgg.streamsBreakdown[sk].revenue += streamsMonth[sk].revenue;
+        yearAgg.streamsBreakdown[sk].cost += streamsMonth[sk].cost;
+        yearAgg.streamsBreakdown[sk].endingUnits = streamsMonth[sk].activeUnits;
+      }
 
       for (const k of PRICE_AREAS) {
         yearAgg.volumeByArea[k] += kwhMonth * ya.priceAreaShare[k];
@@ -401,7 +467,7 @@ export function buildStatements(
 
   for (const m of model.monthly) {
     const revenue = m.totalIncome;
-    const cogs = m.electricityCost + m.certificateCost;
+    const cogs = m.electricityCost + m.certificateCost + m.streamCost;
     const opex =
       m.invoicingCost + m.salesCost + m.salaryCost + m.otherExternal;
     const ebitda = revenue - cogs - opex;

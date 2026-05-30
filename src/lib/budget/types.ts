@@ -19,6 +19,33 @@ export const CHANNELS: { key: ChannelKey; label: string }[] = [
   { key: "other", label: "Other" },
 ];
 
+export type StreamKey = "solar" | "battery" | "vpp" | "saas";
+
+export const STREAMS: { key: StreamKey; label: string; unitLabel: string }[] = [
+  { key: "solar", label: "Solar installations", unitLabel: "systems" },
+  { key: "battery", label: "Battery storage", unitLabel: "systems" },
+  { key: "vpp", label: "VPP enrollment", unitLabel: "assets" },
+  { key: "saas", label: "Energy SaaS", unitLabel: "subscribers" },
+];
+
+export interface StreamAssumptions {
+  enabled: boolean;
+  /** New units sold/onboarded per year. */
+  newUnitsPerYear: number;
+  /** One-time revenue recognised per unit at sale (e.g. solar install). */
+  oneTimeRevenuePerUnit: number;
+  /** Cost-of-goods on one-time revenue, as a fraction (0..1). */
+  oneTimeCogsPct: number;
+  /** Recurring monthly revenue per active unit (O&M, SaaS, VPP fee). */
+  recurringMonthlyPerUnit: number;
+  /** Cost-of-goods on recurring revenue, as a fraction (0..1). */
+  recurringCogsPct: number;
+  /** Annual churn rate on active units (0..1). */
+  annualChurnPct: number;
+  /** Starting active units at scenario start (year 0 only). */
+  startingUnits?: number;
+}
+
 export type PriceAreaKey = "SE1" | "SE2" | "SE3" | "SE4";
 
 export interface AreaPricing {
@@ -85,6 +112,8 @@ export interface YearAssumptions {
   useAreaPricing?: boolean;
   /** First month (1..12) within this year that new customers are acquired. Defaults to 1. */
   salesStartMonth?: number;
+  /** Optional new revenue streams (solar / battery / VPP / SaaS). */
+  streams?: Record<StreamKey, StreamAssumptions>;
 }
 
 export interface OpeningBalance {
@@ -195,6 +224,10 @@ export interface MonthlyRow {
   otherExternal: number;
   loanInterest: number;
   totalCost: number;
+  // Streams
+  streamIncome: number;
+  streamCost: number;
+  streamsBreakdown?: Record<StreamKey, { revenue: number; cost: number; activeUnits: number }>;
   // Results
   ebitda: number;
   cashFlow: number;
@@ -232,6 +265,10 @@ export interface YearlyRow {
   revenueByArea: Record<PriceAreaKey, number>;
   /** Cost-of-goods per price area (SEK) — populated when useAreaPricing=true */
   cogsByArea: Record<PriceAreaKey, number>;
+  /** Aggregated stream income (sum of all enabled streams). */
+  streamIncome: number;
+  streamCost: number;
+  streamsBreakdown: Record<StreamKey, { revenue: number; cost: number; endingUnits: number }>;
 }
 
 export interface ComputedModel {

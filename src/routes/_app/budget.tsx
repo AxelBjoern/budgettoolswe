@@ -5,7 +5,7 @@ import { compute } from "@/lib/budget/engine";
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { KpiCard } from "@/components/budget/KpiCard";
 import { fmtSEK, fmtNum, fmtPct } from "@/lib/budget/format";
-import { CHANNELS, type ChannelKey, type PriceAreaKey } from "@/lib/budget/types";
+import { CHANNELS, STREAMS, type ChannelKey, type PriceAreaKey, type StreamAssumptions, type StreamKey } from "@/lib/budget/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -184,6 +184,7 @@ function BudgetTool() {
           <TabsTrigger value="pricing" className="rounded-sm text-xs uppercase tracking-wider">Pricing</TabsTrigger>
           <TabsTrigger value="costs" className="rounded-sm text-xs uppercase tracking-wider">Costs</TabsTrigger>
           <TabsTrigger value="salaries" className="rounded-sm text-xs uppercase tracking-wider">Salaries</TabsTrigger>
+          <TabsTrigger value="streams" className="rounded-sm text-xs uppercase tracking-wider">Streams</TabsTrigger>
           <TabsTrigger value="areas" className="rounded-sm text-xs uppercase tracking-wider">Price areas</TabsTrigger>
         </TabsList>
 
@@ -389,6 +390,102 @@ function BudgetTool() {
                 </tbody>
 
               </table>
+            </div>
+          </Panel>
+        </TabsContent>
+
+        <TabsContent value="streams" className="mt-4 space-y-4">
+          <Panel title="New revenue streams">
+            <p className="mb-4 text-xs text-muted-foreground">
+              Solar, battery, VPP enrolment and SaaS subscriptions. One-time
+              revenue applies to each new unit sold; recurring revenue applies
+              to every active unit each month. Active units carry across years.
+            </p>
+            <div className="space-y-4">
+              {STREAMS.map((meta) => {
+                const s: StreamAssumptions = ya.streams?.[meta.key] ?? {
+                  enabled: false,
+                  newUnitsPerYear: 0,
+                  oneTimeRevenuePerUnit: 0,
+                  oneTimeCogsPct: 0,
+                  recurringMonthlyPerUnit: 0,
+                  recurringCogsPct: 0,
+                  annualChurnPct: 0,
+                  startingUnits: 0,
+                };
+                const patchStream = (p: Partial<StreamAssumptions>) => {
+                  const current: Record<StreamKey, StreamAssumptions> = ya.streams ?? {
+                    solar: s, battery: s, vpp: s, saas: s,
+                  };
+                  patch({
+                    streams: {
+                      ...current,
+                      [meta.key]: { ...s, ...p },
+                    },
+                  });
+                };
+                const yrBreak = yr.streamsBreakdown?.[meta.key];
+                return (
+                  <div key={meta.key} className={`rounded-sm border border-border p-4 ${s.enabled ? "" : "opacity-60"}`}>
+                    <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-3">
+                      <div>
+                        <div className="text-sm font-semibold">{meta.label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {yrBreak
+                            ? `${fmtNum(Math.round(yrBreak.endingUnits))} ${meta.unitLabel} · ${fmtSEK(yrBreak.revenue, { compact: true })} revenue · ${fmtSEK(yrBreak.cost, { compact: true })} cost`
+                            : `Track ${meta.unitLabel} cohort, recurring revenue and churn.`}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={!!s.enabled}
+                        onCheckedChange={(v) => patchStream({ enabled: v })}
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <FieldNum
+                        label={`New ${meta.unitLabel} / year`}
+                        value={s.newUnitsPerYear}
+                        onChange={(v) => patchStream({ newUnitsPerYear: v })}
+                      />
+                      <FieldNum
+                        label="One-time revenue / unit (SEK)"
+                        value={s.oneTimeRevenuePerUnit}
+                        onChange={(v) => patchStream({ oneTimeRevenuePerUnit: v })}
+                      />
+                      <FieldNum
+                        label="One-time COGS (%)"
+                        value={s.oneTimeCogsPct * 100}
+                        step={0.5}
+                        onChange={(v) => patchStream({ oneTimeCogsPct: v / 100 })}
+                      />
+                      <FieldNum
+                        label="Recurring SEK / unit / month"
+                        value={s.recurringMonthlyPerUnit}
+                        onChange={(v) => patchStream({ recurringMonthlyPerUnit: v })}
+                      />
+                      <FieldNum
+                        label="Recurring COGS (%)"
+                        value={s.recurringCogsPct * 100}
+                        step={0.5}
+                        onChange={(v) => patchStream({ recurringCogsPct: v / 100 })}
+                      />
+                      <FieldNum
+                        label="Annual unit churn (%)"
+                        value={s.annualChurnPct * 100}
+                        step={0.5}
+                        onChange={(v) => patchStream({ annualChurnPct: v / 100 })}
+                      />
+                      {yearIdx === 0 && (
+                        <FieldNum
+                          label={`Starting ${meta.unitLabel}`}
+                          value={s.startingUnits ?? 0}
+                          onChange={(v) => patchStream({ startingUnits: v })}
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Panel>
         </TabsContent>
