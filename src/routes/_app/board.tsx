@@ -26,7 +26,9 @@ import {
 import { SectionHeader } from "@/components/budget/SectionHeader";
 import { KpiCard } from "@/components/budget/KpiCard";
 import { Button } from "@/components/ui/button";
-import { fmtSEK, fmtNum } from "@/lib/budget/format";
+import { fmtSEK, fmtNum, fmtPct } from "@/lib/budget/format";
+import { EbitdaWaterfall, FinancingBridge } from "@/components/budget/BridgeCharts";
+import { useBudgetStore } from "@/lib/budget/store";
 
 export const Route = createFileRoute("/_app/board")({
   head: () => ({
@@ -51,6 +53,10 @@ function BoardPage() {
   );
   const [busy, setBusy] = useState<"xlsx" | "pdf" | "pptx" | null>(null);
 
+  const selectedYear = useBudgetStore((s) => s.selectedYear);
+  const bridgeYear =
+    model.yearly.find((y) => y.year === selectedYear) ?? model.yearly[model.yearly.length - 1];
+
   const horizon = {
     revenue: model.yearly.reduce((a, y) => a + y.totalIncome, 0),
     ebitda: model.yearly.reduce((a, y) => a + y.ebitda, 0),
@@ -59,6 +65,7 @@ function BoardPage() {
     streamRev: model.yearly.reduce((a, y) => a + y.streamIncome, 0),
     financingOut: model.yearly[model.yearly.length - 1].financingEndingOutstanding,
   };
+  const margin = horizon.revenue > 0 ? horizon.ebitda / horizon.revenue : 0;
 
   const yearlyChart = model.yearly.map((y) => ({
     year: String(y.year),
@@ -110,12 +117,17 @@ function BoardPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
         <KpiCard label="Horizon revenue" value={fmtSEK(horizon.revenue, { compact: true })} />
         <KpiCard
           label="Horizon EBITDA"
           value={fmtSEK(horizon.ebitda, { compact: true })}
           tone={horizon.ebitda >= 0 ? "positive" : "negative"}
+        />
+        <KpiCard
+          label="EBITDA margin"
+          value={fmtPct(margin)}
+          tone={margin >= 0 ? "positive" : "negative"}
         />
         <KpiCard
           label="Horizon cash flow"
@@ -126,6 +138,15 @@ function BoardPage() {
         <KpiCard label="Stream revenue" value={fmtSEK(horizon.streamRev, { compact: true })} />
         <KpiCard label="Financing outstanding" value={fmtSEK(horizon.financingOut, { compact: true })} />
       </div>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <ChartFrame title={`EBITDA bridge · ${bridgeYear.year}`}>
+          <EbitdaWaterfall yearly={bridgeYear} />
+        </ChartFrame>
+        <ChartFrame title={`Financing margin bridge · ${bridgeYear.year}`}>
+          <FinancingBridge yearly={bridgeYear} />
+        </ChartFrame>
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <ChartFrame title="Revenue & EBITDA">
