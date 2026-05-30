@@ -59,6 +59,8 @@ function BoardPage() {
   const bridgeYear =
     model.yearly.find((y) => y.year === selectedYear) ?? model.yearly[model.yearly.length - 1];
 
+  const lastCF = model.statements.cashFlow[model.statements.cashFlow.length - 1];
+  const cumulativeCFO = model.statements.cashFlow.reduce((a, r) => a + r.cfo, 0);
   const horizon = {
     revenue: model.yearly.reduce((a, y) => a + y.totalIncome, 0),
     ebitda: model.yearly.reduce((a, y) => a + y.ebitda, 0),
@@ -66,8 +68,14 @@ function BoardPage() {
     endCustomers: model.yearly[model.yearly.length - 1].endingCustomers,
     streamRev: model.yearly.reduce((a, y) => a + y.streamIncome, 0),
     financingOut: model.yearly[model.yearly.length - 1].financingEndingOutstanding,
+    endingCash: lastCF?.endingCash ?? 0,
+    cumulativeCFO,
   };
   const margin = horizon.revenue > 0 ? horizon.ebitda / horizon.revenue : 0;
+
+  const sensitivity = useMemo(() => buildSensitivity(scenario.assumptions, 0.1), [scenario]);
+  const topRisks = sensitivity.rows.slice(0, 3);
+
 
   const yearlyChart = model.yearly.map((y) => ({
     year: String(y.year),
