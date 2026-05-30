@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScenarioMenu } from "./ScenarioMenu";
+import { AssumptionsDrawer } from "./AssumptionsDrawer";
 import {
   LayoutDashboard,
   Sliders,
@@ -19,6 +21,7 @@ import {
   Landmark,
   Activity,
   BookOpenCheck,
+  History,
 } from "lucide-react";
 
 const nav = [
@@ -28,28 +31,34 @@ const nav = [
   { to: "/statements", label: "Statements", icon: FileBarChart },
   { to: "/financing", label: "Financing", icon: Landmark },
   { to: "/sensitivity", label: "Sensitivity", icon: Activity },
+  { to: "/compare", label: "Compare", icon: GitCompare },
   { to: "/board", label: "Board pack", icon: BookOpenCheck },
   { to: "/results", label: "Results", icon: ClipboardList },
-  { to: "/scenarios", label: "Scenarios", icon: GitCompare },
+  { to: "/changelog", label: "Log", icon: History },
 ] as const;
+
+function relativeTime(ts: number) {
+  const d = Date.now() - ts;
+  if (d < 60_000) return "just now";
+  if (d < 3_600_000) return `${Math.floor(d / 60_000)}m ago`;
+  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}h ago`;
+  return `${Math.floor(d / 86_400_000)}d ago`;
+}
 
 export function Topbar() {
   const loc = useLocation();
-  const scenarios = useBudgetStore((s) => s.scenarios);
-  const activeId = useBudgetStore((s) => s.activeScenarioId);
-  const setActive = useBudgetStore((s) => s.setActiveScenario);
   const year = useBudgetStore((s) => s.selectedYear);
   const setYear = useBudgetStore((s) => s.setSelectedYear);
   const density = useBudgetStore((s) => s.density);
   const setDensity = useBudgetStore((s) => s.setDensity);
-  const updateAssumptions = useBudgetStore((s) => s.updateAssumptions);
+  const version = useBudgetStore((s) => s.version);
+  const lastUpdated = useBudgetStore((s) => s.lastUpdated);
   const setContractStartDate = useBudgetStore((s) => s.setContractStartDate);
   const scenario = useActiveScenario();
-  const appr = scenario.assumptions.salesAppreciationPct ?? 0;
 
   return (
     <header className="border-b border-border bg-card/60 backdrop-blur">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-4 px-6 py-3">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-6 py-3">
         <Link to="/" className="flex items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-sm bg-primary text-primary-foreground font-serif text-lg">
             N
@@ -59,12 +68,12 @@ export function Topbar() {
               NORDENERGI
             </div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Budget Terminal
+              Budget Terminal · v{version} · {relativeTime(lastUpdated)}
             </div>
           </div>
         </Link>
 
-        <nav className="ml-6 flex items-center gap-1">
+        <nav className="ml-4 flex flex-wrap items-center gap-1">
           {nav.map((n) => {
             const active = loc.pathname === n.to;
             const Icon = n.icon;
@@ -72,7 +81,7 @@ export function Topbar() {
               <Link
                 key={n.to}
                 to={n.to}
-                className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-colors ${
+                className={`flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wider transition-colors ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -88,7 +97,7 @@ export function Topbar() {
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Contract start
+              Contract
             </span>
             <Input
               type="date"
@@ -96,24 +105,7 @@ export function Topbar() {
               onChange={(e) =>
                 setContractStartDate(scenario.id, e.target.value || undefined)
               }
-              className="h-8 w-[140px] rounded-sm border-border bg-background text-xs"
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Apprec. %/yr
-            </span>
-            <Input
-              type="number"
-              step={0.5}
-              value={(appr * 100).toFixed(2)}
-              onChange={(e) =>
-                updateAssumptions(scenario.id, {
-                  salesAppreciationPct: Number(e.target.value) / 100,
-                })
-              }
-              className="h-8 w-[70px] rounded-sm border-border bg-background text-right text-xs tabular-nums"
+              className="h-8 w-[130px] rounded-sm border-border bg-background text-xs"
             />
           </div>
 
@@ -125,7 +117,7 @@ export function Topbar() {
               value={String(year)}
               onValueChange={(v) => setYear(Number(v))}
             >
-              <SelectTrigger className="h-8 w-[88px] rounded-sm border-border bg-background text-xs">
+              <SelectTrigger className="h-8 w-[84px] rounded-sm border-border bg-background text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -138,23 +130,8 @@ export function Topbar() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Scenario
-            </span>
-            <Select value={activeId} onValueChange={setActive}>
-              <SelectTrigger className="h-8 w-[160px] rounded-sm border-border bg-background text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {scenarios.map((sc) => (
-                  <SelectItem key={sc.id} value={sc.id}>
-                    {sc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ScenarioMenu />
+          <AssumptionsDrawer />
 
           <Button
             variant="outline"
