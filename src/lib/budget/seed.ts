@@ -99,10 +99,24 @@ function zeroYear(): YearAssumptions {
 void yearAssumptions;
 void baseSalaries;
 
+const HORIZON_YEARS = 10;
+
 export const SEED_ASSUMPTIONS: Assumptions = {
   startYear: 2026,
-  years: 5,
+  years: HORIZON_YEARS,
   vatRate: 0.25,
   salesAppreciationPct: 0,
-  perYear: [zeroYear(), zeroYear(), zeroYear(), zeroYear(), zeroYear()],
+  taxRate: 0.206,
+  depreciationYears: 5,
+  dso: 30,
+  dpo: 30,
+  opening: {
+    cash: 0,
+    accountsReceivable: 0,
+    accountsPayable: 0,
+    fixedAssets: 0,
+    debt: 0,
+    equity: 0,
+  },
+  perYear: Array.from({ length: HORIZON_YEARS }, () => zeroYear()),
 };

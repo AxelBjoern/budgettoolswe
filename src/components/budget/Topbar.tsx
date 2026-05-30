@@ -15,12 +15,14 @@ import {
   CalendarRange,
   GitCompare,
   ClipboardList,
+  FileBarChart,
 } from "lucide-react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/budget", label: "Budget", icon: Sliders },
   { to: "/monthly", label: "Monthly", icon: CalendarRange },
+  { to: "/statements", label: "Statements", icon: FileBarChart },
   { to: "/results", label: "Results", icon: ClipboardList },
   { to: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;
@@ -121,7 +123,7 @@ export function Topbar() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2026, 2027, 2028, 2029, 2030].map((y) => (
+                {Array.from({ length: 10 }, (_, i) => 2026 + i).map((y) => (
                   <SelectItem key={y} value={String(y)}>
                     {y}
                   </SelectItem>
