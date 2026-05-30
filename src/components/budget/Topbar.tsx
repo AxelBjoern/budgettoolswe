@@ -18,6 +18,7 @@ import {
   FileBarChart,
   Landmark,
   Activity,
+  BookOpenCheck,
 } from "lucide-react";
 
 const nav = [
@@ -27,6 +28,7 @@ const nav = [
   { to: "/statements", label: "Statements", icon: FileBarChart },
   { to: "/financing", label: "Financing", icon: Landmark },
   { to: "/sensitivity", label: "Sensitivity", icon: Activity },
+  { to: "/board", label: "Board pack", icon: BookOpenCheck },
   { to: "/results", label: "Results", icon: ClipboardList },
   { to: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;

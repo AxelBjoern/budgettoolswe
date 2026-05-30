@@ -18,6 +18,7 @@ import { Route as AppResultsRouteImport } from './routes/_app/results'
 import { Route as AppMonthlyRouteImport } from './routes/_app/monthly'
 import { Route as AppFinancingRouteImport } from './routes/_app/financing'
 import { Route as AppBudgetRouteImport } from './routes/_app/budget'
+import { Route as AppBoardRouteImport } from './routes/_app/board'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -63,9 +64,15 @@ const AppBudgetRoute = AppBudgetRouteImport.update({
   path: '/budget',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBoardRoute = AppBoardRouteImport.update({
+  id: '/board',
+  path: '/board',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/board': typeof AppBoardRoute
   '/budget': typeof AppBudgetRoute
   '/financing': typeof AppFinancingRoute
   '/monthly': typeof AppMonthlyRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/statements': typeof AppStatementsRoute
 }
 export interface FileRoutesByTo {
+  '/board': typeof AppBoardRoute
   '/budget': typeof AppBudgetRoute
   '/financing': typeof AppFinancingRoute
   '/monthly': typeof AppMonthlyRoute
@@ -87,6 +95,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_app/board': typeof AppBoardRoute
   '/_app/budget': typeof AppBudgetRoute
   '/_app/financing': typeof AppFinancingRoute
   '/_app/monthly': typeof AppMonthlyRoute
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/board'
     | '/budget'
     | '/financing'
     | '/monthly'
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/statements'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/board'
     | '/budget'
     | '/financing'
     | '/monthly'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/_app/board'
     | '/_app/budget'
     | '/_app/financing'
     | '/_app/monthly'
@@ -199,10 +211,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBudgetRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/board': {
+      id: '/_app/board'
+      path: '/board'
+      fullPath: '/board'
+      preLoaderRoute: typeof AppBoardRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppBoardRoute: typeof AppBoardRoute
   AppBudgetRoute: typeof AppBudgetRoute
   AppFinancingRoute: typeof AppFinancingRoute
   AppMonthlyRoute: typeof AppMonthlyRoute
@@ -214,6 +234,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppBoardRoute: AppBoardRoute,
   AppBudgetRoute: AppBudgetRoute,
   AppFinancingRoute: AppFinancingRoute,
   AppMonthlyRoute: AppMonthlyRoute,
