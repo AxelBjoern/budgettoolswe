@@ -349,3 +349,30 @@ function BalanceSheetTable({
     />
   );
 }
+
+function NumField({
+  label,
+  value,
+  onChange,
+  step = 1000,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <Input
+        type="number"
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        className="h-8 rounded-sm border-border bg-background text-right text-xs tabular-nums"
+      />
+    </label>
+  );
+}
