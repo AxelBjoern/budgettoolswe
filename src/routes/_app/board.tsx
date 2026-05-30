@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { FileSpreadsheet, FileText, Presentation, Loader2, Printer, AlertTriangle } from "lucide-react";
 import { useActiveScenario } from "@/lib/budget/store";
-import { compute } from "@/lib/budget/engine";
+import { compute, buildStatements } from "@/lib/budget/engine";
 import {
   buildBoardContext,
   exportExcel,
