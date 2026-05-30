@@ -139,6 +139,12 @@ function BudgetTool() {
               <RotateCcw className="mr-1 h-3.5 w-3.5" />
               All to 1
             </Button>
+            <SyncFromEnergyDialog
+              scenarioId={scenario.id}
+              years={scenario.assumptions.perYear.length}
+              updateYear={updateYear}
+              currentShare={ya.priceAreaShare}
+            />
           </div>
         }
       />
