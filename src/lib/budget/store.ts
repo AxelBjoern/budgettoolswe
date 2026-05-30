@@ -132,7 +132,7 @@ export const useBudgetStore = create<BudgetState>()(
           ),
         })),
     }),
-    { name: "budget-store-v5-streams" },
+    { name: "budget-store-v6-financing" },
   ),
 );
 
