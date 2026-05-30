@@ -16,6 +16,7 @@ import {
   GitCompare,
   ClipboardList,
   FileBarChart,
+  Landmark,
 } from "lucide-react";
 
 const nav = [
@@ -23,6 +24,7 @@ const nav = [
   { to: "/budget", label: "Budget", icon: Sliders },
   { to: "/monthly", label: "Monthly", icon: CalendarRange },
   { to: "/statements", label: "Statements", icon: FileBarChart },
+  { to: "/financing", label: "Financing", icon: Landmark },
   { to: "/results", label: "Results", icon: ClipboardList },
   { to: "/scenarios", label: "Scenarios", icon: GitCompare },
 ] as const;

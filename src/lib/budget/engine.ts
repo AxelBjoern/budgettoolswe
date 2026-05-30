@@ -1,6 +1,9 @@
 // Pure budget computation engine.
 // Takes Assumptions, returns monthly + yearly aggregates.
 
+import { buildFinancing } from "./financing";
+
+
 import type {
   Actuals,
   Assumptions,
@@ -80,6 +83,12 @@ export function compute(a: Assumptions): ComputedModel {
     saas: a.perYear[0].streams?.saas?.startingUnits ?? 0,
   };
 
+  const financing = buildFinancing(a);
+  const finByKey = new Map<string, ReturnType<typeof buildFinancing>["monthly"][number]>();
+  for (const r of financing.monthly) finByKey.set(`${r.year}-${r.month}`, r);
+
+
+
 
   for (let y = 0; y < a.years; y++) {
     const ya = a.perYear[y];
@@ -128,6 +137,9 @@ export function compute(a: Assumptions): ComputedModel {
       streamIncome: 0,
       streamCost: 0,
       streamsBreakdown: emptyStreamBreakdown((k) => ({ revenue: 0, cost: 0, endingUnits: streamActive[k] })),
+      financingIncome: 0,
+      financingCost: 0,
+      financingEndingOutstanding: 0,
     };
 
     for (let m = 1; m <= 12; m++) {
@@ -212,12 +224,18 @@ export function compute(a: Assumptions): ComputedModel {
         streamActive[sk] = endU;
       }
 
+      const fin = finByKey.get(`${yearLabel}-${m}`);
+      const financingIncome = fin?.totalIncome ?? 0;
+      const financingCost = fin?.totalCost ?? 0;
+      const financingOutstanding = fin?.outstanding ?? 0;
+
       const totalIncome =
         electricityIncome +
         certificateIncome +
         extraServicesIncome +
         subscriptionIncome +
-        streamIncome;
+        streamIncome +
+        financingIncome;
 
       const totalCost =
         electricityCost +
@@ -227,7 +245,8 @@ export function compute(a: Assumptions): ComputedModel {
         salaryMonth +
         otherExtMonth +
         loanMonth +
-        streamCost;
+        streamCost +
+        financingCost;
 
       const ebitda = totalIncome - totalCost + loanMonth; // EBITDA before interest
       const cashFlow = totalIncome - totalCost;
@@ -265,6 +284,9 @@ export function compute(a: Assumptions): ComputedModel {
         streamIncome,
         streamCost,
         streamsBreakdown: streamsMonth,
+        financingIncome,
+        financingCost,
+        financingOutstanding,
         ebitda,
         cashFlow,
         vatOut,
@@ -292,6 +314,9 @@ export function compute(a: Assumptions): ComputedModel {
       yearAgg.loanInterest += loanMonth;
       yearAgg.streamIncome += streamIncome;
       yearAgg.streamCost += streamCost;
+      yearAgg.financingIncome += financingIncome;
+      yearAgg.financingCost += financingCost;
+      yearAgg.financingEndingOutstanding = financingOutstanding;
       for (const sk of STREAM_KEYS) {
         yearAgg.streamsBreakdown[sk].revenue += streamsMonth[sk].revenue;
         yearAgg.streamsBreakdown[sk].cost += streamsMonth[sk].cost;
@@ -467,7 +492,7 @@ export function buildStatements(
 
   for (const m of model.monthly) {
     const revenue = m.totalIncome;
-    const cogs = m.electricityCost + m.certificateCost + m.streamCost;
+    const cogs = m.electricityCost + m.certificateCost + m.streamCost + m.financingCost;
     const opex =
       m.invoicingCost + m.salesCost + m.salaryCost + m.otherExternal;
     const ebitda = revenue - cogs - opex;

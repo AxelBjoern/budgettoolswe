@@ -141,5 +141,17 @@ export const SEED_ASSUMPTIONS: Assumptions = {
     debt: 0,
     equity: 0,
   },
+  financing: {
+    enabled: false,
+    originationsPerYear: Array.from({ length: HORIZON_YEARS }, () => 0),
+    avgPrincipal: 0,
+    termMonths: 120,
+    customerAPR: 0,
+    originationFeePct: 0,
+    costOfCapitalPct: 0,
+    defaultAnnualPct: 0,
+    recoveryPct: 0,
+    openingOutstanding: 0,
+  },
   perYear: Array.from({ length: HORIZON_YEARS }, () => zeroYear()),
 };
