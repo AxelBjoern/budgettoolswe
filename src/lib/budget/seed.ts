@@ -44,6 +44,13 @@ function yearAssumptions(scale: number, starting: number): YearAssumptions {
     salaries: baseSalaries(),
     priceAreaShare: { SE1: 0.12, SE2: 0.18, SE3: 0.52, SE4: 0.18 },
     startingCustomers: starting,
+    priceAreaPricing: {
+      SE1: { avgPurchaseOre: 28, pslagOre: 8, elcertOre: 4.5 },
+      SE2: { avgPurchaseOre: 32, pslagOre: 8, elcertOre: 4.5 },
+      SE3: { avgPurchaseOre: 58, pslagOre: 10, elcertOre: 4.5 },
+      SE4: { avgPurchaseOre: 78, pslagOre: 12, elcertOre: 4.5 },
+    },
+    useAreaPricing: false,
   };
 }
 

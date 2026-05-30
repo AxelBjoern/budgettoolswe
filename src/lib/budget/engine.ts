@@ -71,6 +71,8 @@ export function compute(a: Assumptions): ComputedModel {
       invoicingCost: 0,
       loanInterest: 0,
       volumeByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
+      revenueByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
+      cogsByArea: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
     };
 
     for (let m = 1; m <= 12; m++) {
@@ -82,9 +84,39 @@ export function compute(a: Assumptions): ComputedModel {
 
       const kwhMonth = (avgCust * ya.kwhPerCustomerYear) / 12;
 
-      const electricityIncome =
-        kwhMonth * ya.pricePerKwh * (1 + ya.surchargePct);
-      const certificateIncome = kwhMonth * ya.certificateCostPerKwh; // pass-through revenue
+      const useArea = !!(ya.useAreaPricing && ya.priceAreaPricing);
+      let electricityIncome = 0;
+      let certificateIncome = 0;
+      let electricityCost = 0;
+      let certificateCost = 0;
+      const monthRevenueByArea: Record<PriceAreaKey, number> = { SE1: 0, SE2: 0, SE3: 0, SE4: 0 };
+      const monthCogsByArea: Record<PriceAreaKey, number> = { SE1: 0, SE2: 0, SE3: 0, SE4: 0 };
+
+      if (useArea) {
+        for (const k of PRICE_AREAS) {
+          const p = ya.priceAreaPricing![k];
+          const kwhArea = kwhMonth * ya.priceAreaShare[k];
+          const sellSEK = (p.avgPurchaseOre + p.pslagOre) / 100;
+          const costSEK = p.avgPurchaseOre / 100;
+          const certSEK = p.elcertOre / 100;
+          const eIncA = kwhArea * sellSEK * (1 + ya.surchargePct);
+          const cIncA = kwhArea * certSEK;
+          const eCostA = kwhArea * costSEK;
+          const cCostA = kwhArea * certSEK;
+          electricityIncome += eIncA;
+          certificateIncome += cIncA;
+          electricityCost += eCostA;
+          certificateCost += cCostA;
+          monthRevenueByArea[k] = eIncA + cIncA;
+          monthCogsByArea[k] = eCostA + cCostA;
+        }
+      } else {
+        electricityIncome = kwhMonth * ya.pricePerKwh * (1 + ya.surchargePct);
+        certificateIncome = kwhMonth * ya.certificateCostPerKwh;
+        electricityCost = kwhMonth * ya.costPerKwh;
+        certificateCost = kwhMonth * ya.certificateCostPerKwh;
+      }
+
       const extraServicesIncome =
         (avgCust * ya.extraServicesPerCustomerYear) / 12;
       const subscriptionIncome =
@@ -95,8 +127,6 @@ export function compute(a: Assumptions): ComputedModel {
         extraServicesIncome +
         subscriptionIncome;
 
-      const electricityCost = kwhMonth * ya.costPerKwh;
-      const certificateCost = kwhMonth * ya.certificateCostPerKwh;
       const invoicingCost = (avgCust * ya.invoicingCostPerCustomer) / 12;
 
       const totalCost =
@@ -169,6 +199,8 @@ export function compute(a: Assumptions): ComputedModel {
 
       for (const k of PRICE_AREAS) {
         yearAgg.volumeByArea[k] += kwhMonth * ya.priceAreaShare[k];
+        yearAgg.revenueByArea[k] += monthRevenueByArea[k];
+        yearAgg.cogsByArea[k] += monthCogsByArea[k];
       }
 
       active = endCust;

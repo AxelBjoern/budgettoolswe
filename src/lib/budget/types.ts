@@ -21,6 +21,15 @@ export const CHANNELS: { key: ChannelKey; label: string }[] = [
 
 export type PriceAreaKey = "SE1" | "SE2" | "SE3" | "SE4";
 
+export interface AreaPricing {
+  /** öre/kWh — Energy system: avg_purchase_price_per_mwh / 10 */
+  avgPurchaseOre: number;
+  /** öre/kWh — Energy system: pslag_per_mwh / 10 */
+  pslagOre: number;
+  /** öre/kWh — Energy system: elcert_per_mwh / 10 */
+  elcertOre: number;
+}
+
 export interface SalaryRole {
   title: string;
   count: number;
@@ -62,6 +71,10 @@ export interface YearAssumptions {
   priceAreaShare: Record<PriceAreaKey, number>;
   /** Starting active customers at year start */
   startingCustomers: number;
+  /** Optional per-area pricing override (öre/kWh). Synced from Energy system. */
+  priceAreaPricing?: Record<PriceAreaKey, AreaPricing>;
+  /** When true and priceAreaPricing is set, engine uses per-area pricing instead of global pricePerKwh/costPerKwh/certificateCostPerKwh. */
+  useAreaPricing?: boolean;
 }
 
 export interface Assumptions {
@@ -130,6 +143,10 @@ export interface YearlyRow {
   loanInterest: number;
   /** Volume per price area (kWh) */
   volumeByArea: Record<PriceAreaKey, number>;
+  /** Revenue per price area (SEK) — populated when useAreaPricing=true */
+  revenueByArea: Record<PriceAreaKey, number>;
+  /** Cost-of-goods per price area (SEK) — populated when useAreaPricing=true */
+  cogsByArea: Record<PriceAreaKey, number>;
 }
 
 export interface ComputedModel {

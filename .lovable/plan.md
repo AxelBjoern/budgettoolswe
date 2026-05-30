@@ -1,87 +1,103 @@
+# Merge Energy System Pricing Into Budget Tool
 
-## Goal
-Turn `Budget demo energi version 1.xlsx` into a web app with two surfaces:
-1. **Dashboard** — read-only KPIs and charts driven by the model
-2. **Budget tool** — editable assumptions that recompute live
+Keep the current budget model and Price Areas UI as-is. **Add** per-zone pricing (avg purchase / påslag / elcert in öre/kWh) on top, mirroring the Energy system's `PricingTab`, and let it optionally override the global `pricePerKwh` / `costPerKwh` / `certificateCostPerKwh` when populated.
 
-Source workbook models a Nordic retail energy company. Key sheets: `Prognos` (5-yr engine), `Start budget`, `Januari` (monthly P&L template), `Prisättning (se)` (price areas SE1–SE4), `Fakturor`.
+## 1. Extend the data model (additive, no breaking changes)
 
-**Planning horizon: 2026–2030** (originally 2025–2029 in the file — we re-anchor to the current year and forward-shift all seed values by one year).
+`src/lib/budget/types.ts` — add an optional block, leave every existing field intact:
 
-## Visual direction — VDNX design system
+```ts
+export interface AreaPricing {
+  avgPurchaseOre: number; // öre/kWh (Energy system: avg_purchase_price_per_mwh / 10)
+  pslagOre: number;       // öre/kWh (pslag_per_mwh / 10)
+  elcertOre: number;      // öre/kWh (elcert_per_mwh / 10)
+}
+export interface YearAssumptions {
+  // ...all existing fields untouched...
+  /** Optional per-area pricing override. When defined, engine uses these per zone instead of global pricePerKwh/costPerKwh/certificateCostPerKwh. */
+  priceAreaPricing?: Record<PriceAreaKey, AreaPricing>;
+  /** Toggle to actually use priceAreaPricing in compute */
+  useAreaPricing?: boolean;
+}
+```
 
-Institutional, paper-and-ink financial aesthetic. Closer to a Bloomberg terminal / governance dashboard than a generic SaaS app.
+Add `volumeByArea` is already there. Also add `revenueByArea` and `cogsByArea` to `YearlyRow` for the new chart (additive).
 
-**Tokens** (`src/styles.css`, written as `oklch` but mapped from these HSL refs):
-- `--background` warm paper `hsl(38 30% 96%)` · `--foreground` deep navy `hsl(213 52% 18%)`
-- `--card` `hsl(38 30% 97%)` · `--muted` `hsl(38 22% 93%)`
-- `--primary` VDNX Navy `#1E3A5F` (`hsl(213 52% 24%)`)
-- `--accent` VDNX Gold `#C9A962` (`hsl(42 49% 59%)`) with black foreground
-- `--success` `hsl(142 71% 45%)` · `--destructive` for negatives / variance
-- `--border` hairline `hsl(213 20% 86%)` · `--radius` `0.5rem`
-- Status pills: compliant/warning/critical in blue tints (re-used for variance vs budget)
-- Dark mode: near-black bg, gold becomes primary
+## 2. Engine — opt-in branch in compute()
 
-**Type & chrome:**
-- Sans body with OpenType `"rlig","calt","ss01","ss02"`
-- Bold headings with `text-shadow: 0 1px 2px rgba(0,0,0,.1)` — subtle ink depth
-- 1px navy-tinted hairlines, no soft shadows
-- Density toggle `data-density="compact" | "comfortable"` driving `--ui-density`; financial tables default to compact
-- Subtle `fade-in` on first render only; respect reduced-motion
+`src/lib/budget/engine.ts`: inside the monthly loop, when `ya.useAreaPricing && ya.priceAreaPricing`, replace the single-line `electricityIncome` / `electricityCost` / `certificateCost` with a per-area sum, weighted by `priceAreaShare`:
 
-**Component patterns:**
-- KPI cards: paper surface, navy heading, gold underline under the headline figure
-- Tables: hairline rules, tabular-nums, right-aligned, parentheses for negatives
-- Charts: navy = budget, gold = scenario/actual, muted = prior year
+```text
+for each area k:
+  kwhArea = kwhMonth * share[k]
+  sellSEK = (avgPurchaseOre[k] + pslagOre[k]) / 100
+  costSEK = avgPurchaseOre[k] / 100
+  certSEK = elcertOre[k] / 100
+  electricityIncome += kwhArea * sellSEK * (1 + surchargePct)
+  electricityCost   += kwhArea * costSEK
+  certificateCost   += kwhArea * certSEK
+  certificateIncome += kwhArea * certSEK   // pass-through, same as today
+  revenueByArea[k]  += kwhArea * sellSEK
+  cogsByArea[k]     += kwhArea * (costSEK + certSEK)
+```
 
-## Scope
+When the toggle is off, the existing formulas stay byte-identical. No existing scenario changes its numbers.
 
-### Editable assumptions (Budget tool)
-- New customers per year by channel (Internet, Telephone, Print, Collaborations, Tell-a-friend, Fairs, Other)
-- Churn %, acquisition cost per customer
-- Avg consumption (kWh/customer/yr), subscription (SEK/yr)
-- Avg cost per kWh, certificate cost, surcharges %
-- Extra services profit/customer, CO₂ capture, loan & interest, invoicing costs
-- Salary roster (VD, vVD, CFO, IT×3, Law×2, Sales Manager, Sales×20, Customer service×5, Quality×4) + social fees
-- Other external expenses (rent, accounting, travel, marketing, IT, insurance…)
-- Price areas SE1–SE4 (volume share, påslag) — v1 uses weighted average
+## 3. Seed defaults (`src/lib/budget/seed.ts`)
 
-### Computed outputs
-Active customers (start + new − churn) monthly + accumulated · Income (electricity, certificate, extra services, subscription) → Net + VAT · Direct costs · Sales costs per channel · OpEx · Salaries incl. social · EBITDA / Result / Cash flow (monthly + accumulated) · VAT in/out · VAT report.
+Add — alongside the current globals, do not remove them:
 
-### Dashboard
-KPI cards: Customers (year-end), Turnover, EBITDA, Cash flow accumulated, CAC, Churn %.
-Charts (recharts, navy+gold palette):
-- Customer growth by month (line, 60 months)
-- New customers per channel (stacked bar)
-- Revenue vs costs per year (grouped bar)
-- P&L waterfall (Income → Direct → Sales → OpEx → Salaries → EBITDA)
-- Cash flow accumulated (area)
-- Volume per price area SE1–SE4 (donut)
+```ts
+priceAreaPricing: {
+  SE1: { avgPurchaseOre: 28, pslagOre: 8, elcertOre: 4.5 },
+  SE2: { avgPurchaseOre: 32, pslagOre: 8, elcertOre: 4.5 },
+  SE3: { avgPurchaseOre: 58, pslagOre: 10, elcertOre: 4.5 },
+  SE4: { avgPurchaseOre: 78, pslagOre: 12, elcertOre: 4.5 },
+},
+useAreaPricing: false, // start opt-in
+```
 
-Top bar: year selector **2026–2030**, scenario selector, density toggle.
+## 4. Budget UI — extend the existing Price Areas tab
 
-### Budget tool
-- Grouped forms (tabs: Customers, Pricing, Costs, Salaries, Other) — live recompute
-- Monthly grid 12×5 (customers, income, costs, result) — compact density
-- Scenarios: Base / Optimistic / Pessimistic — save, duplicate, side-by-side compare
-- Export to XLSX/CSV; re-import original workbook to reseed
+`src/routes/_app/budget.tsx`: keep the existing share editor exactly as it is. Below the share table, in the same `Panel` and same VDNX style (hairline borders, `tabular-nums`, `text-xs uppercase tracking-wider` headers), add:
 
-## Technical approach
-- Stack: existing TanStack Start + Tailwind + shadcn/ui · charts via `recharts` · xlsx via `xlsx` (SheetJS)
-- `src/lib/budget/engine.ts` — pure TS `(Assumptions) → { monthly[], yearly[], kpis }`, mirrors Excel formulas, no spreadsheet runtime
-- `src/lib/budget/types.ts`, `src/lib/budget/seed.ts` (extracted from workbook, year-shifted to 2026)
-- Zustand + localStorage for scenarios (no auth in v1)
-- Routes: `/` Dashboard · `/budget` (tabs) · `/budget/monthly` · `/scenarios`
-- Components: `KpiCard`, `RevenueCostChart`, `CustomerGrowthChart`, `WaterfallChart`, `AssumptionsForm`, `MonthlyGrid`, `ScenarioSwitcher`, `Topbar`
+- A switch **"Use per-area pricing"** bound to `ya.useAreaPricing`. When off, the rest of the section is dimmed and read-only.
+- A second table with one row per zone:
 
-## Out of scope (v1)
-- Auth / shared scenarios across users
-- Cell-level formula audit trail
-- Full per-area SE1–SE4 weighted pricing (v1 = weighted average)
-- Currency switching (SEK only)
+```text
+Zone | Avg öre/kWh | Påslag öre/kWh | Elcert öre/kWh | Total öre/kWh | SEK/kWh
+```
 
-## Open questions
-1. Use the uploaded `.xlsx` as **baked-in seed** (recommended) or upload on first load?
-2. UI language: **English** (matches `Prognos`) or **Swedish** (matches monthly sheets)?
-3. **Scenario compare** in v1, or later?
+Inputs use `step=0.001`, same `FieldNum` styling already used in the tab. Footer row shows volume-weighted average (using current `priceAreaShare`), matching the Energy system's "Snitt (vägt)" line.
+
+Add a **"Sync from Energy system"** button in the same row as the existing *Reset / All to 1 / Export* buttons in the Budget header (not a new toolbar). Clicking opens a small dialog with:
+
+- A textarea accepting the exact JSON returned by `listManagedZonePrices` in the Energy system (`[{ zone, avg_purchase_price_per_mwh, pslag_per_mwh, elcert_per_mwh, volume_mwh }, …]`).
+- A checkbox **"Apply to all years"** (default on).
+- A checkbox **"Also update area share from volumes"** (default off).
+- On Apply: convert MWh→kWh and SEK/MWh→öre/kWh (×0.1), write into `priceAreaPricing`, and set `useAreaPricing = true`.
+
+The existing **"All to 1"** reset is extended to also set every area's pricing fields to 1 so totals stay finite.
+
+## 5. Dashboard — surface the new info without redesign
+
+`src/routes/_app/index.tsx`: keep all current KPI cards and charts. Only:
+
+- The "Volume per Price Area" card stays as-is.
+- When `useAreaPricing` is on for the selected year, **add** a small companion bar chart **"Sell price per area (SEK/kWh)"** in the empty slot of the existing grid. Same `KpiCard`/chart styling. No layout reshuffle.
+- KPI "Avg sell SEK/kWh" (if present) reads weighted average from `revenueByArea / volumeByArea` when area pricing is on; otherwise it shows the current `pricePerKwh`.
+
+## 6. Out of scope
+
+- Live cross-project DB fetch from the Energy system's Supabase. The sync stays paste-JSON for now; a follow-up can expose a public read endpoint there and replace the dialog with a one-click fetch.
+- Monthly granularity per area (Energy system is monthly; budget tool stays yearly).
+- Renaming or removing any existing assumption field — strictly additive.
+
+## Files touched
+
+- `src/lib/budget/types.ts` — additive: `AreaPricing`, optional `priceAreaPricing`, `useAreaPricing`, optional `revenueByArea`/`cogsByArea` on `YearlyRow`
+- `src/lib/budget/engine.ts` — opt-in per-area branch
+- `src/lib/budget/seed.ts` — defaults for the new fields
+- `src/lib/budget/format.ts` — `fmtOre`, `fmtSekPerKwh`
+- `src/routes/_app/budget.tsx` — extended Price Areas tab + Sync dialog
+- `src/routes/_app/index.tsx` — optional per-area sell-price chart
