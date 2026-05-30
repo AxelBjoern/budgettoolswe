@@ -87,10 +87,19 @@ export interface YearAssumptions {
   salesStartMonth?: number;
 }
 
+export interface OpeningBalance {
+  cash: number;
+  accountsReceivable: number;
+  accountsPayable: number;
+  fixedAssets: number;
+  debt: number;
+  equity: number;
+}
+
 export interface Assumptions {
   /** First year (e.g. 2026) */
   startYear: number;
-  /** Number of forecast years (default 5) */
+  /** Number of forecast years (default 10) */
   years: number;
   /** Per-year overrides (year offset 0..years-1) */
   perYear: YearAssumptions[];
@@ -98,6 +107,70 @@ export interface Assumptions {
   vatRate: number;
   /** Yearly sales appreciation rate (0..1). Applied to sell-side prices, subscriptions, extra services. */
   salesAppreciationPct?: number;
+  /** Corporate income tax rate (0..1) applied to positive EBT. */
+  taxRate?: number;
+  /** Useful life of capitalized fixed assets (years) — straight-line D&A. */
+  depreciationYears?: number;
+  /** Days Sales Outstanding — drives accounts receivable. */
+  dso?: number;
+  /** Days Payable Outstanding — drives accounts payable. */
+  dpo?: number;
+  /** Opening balance sheet (period 0). */
+  opening?: OpeningBalance;
+}
+
+/** Period in P&L / Cash Flow / Balance Sheet output. */
+export interface PnLRow {
+  year: number;
+  month: number;
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  opex: number;          // salaries + other external + invoicing + sales
+  ebitda: number;
+  depreciation: number;
+  ebit: number;
+  interest: number;
+  ebt: number;
+  tax: number;
+  netIncome: number;
+}
+
+export interface CashFlowRow {
+  year: number;
+  month: number;
+  netIncome: number;
+  depreciation: number;
+  changeAR: number;
+  changeAP: number;
+  cfo: number;            // operating cash flow
+  capex: number;
+  cfi: number;            // investing
+  debtChange: number;
+  cff: number;            // financing
+  netChange: number;
+  endingCash: number;
+}
+
+export interface BalanceSheetRow {
+  year: number;
+  month: number;
+  cash: number;
+  accountsReceivable: number;
+  fixedAssets: number;
+  totalAssets: number;
+  accountsPayable: number;
+  debt: number;
+  totalLiabilities: number;
+  equity: number;
+  totalLiabEquity: number;
+  check: number;          // assets − (L + E); should be ~0
+}
+
+export interface Statements {
+  pnl: PnLRow[];
+  cashFlow: CashFlowRow[];
+  balanceSheet: BalanceSheetRow[];
 }
 
 export interface MonthlyRow {
