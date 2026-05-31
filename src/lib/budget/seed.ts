@@ -102,11 +102,11 @@ function zeroYear(): YearAssumptions {
     surchargePct: 0,
     extraServicesPerCustomerYear: 0,
     otherExternalExpenses: 0,
-    socialFeesPct: 0.3142,
+    socialFeesPct: 0,
     loanInterest: 0,
     invoicingCostPerCustomer: 0,
     salaries: [],
-    priceAreaShare: { SE1: 0.25, SE2: 0.25, SE3: 0.25, SE4: 0.25 },
+    priceAreaShare: { SE1: 0, SE2: 0, SE3: 0, SE4: 0 },
     startingCustomers: 0,
     priceAreaPricing: {
       SE1: { avgPurchaseOre: 0, pslagOre: 0, elcertOre: 0 },
