@@ -243,7 +243,7 @@ export const useBudgetStore = create<BudgetState>()(
       clearAuditLog: () => set({ auditLog: [] }),
     }),
     {
-      name: "budget-store-v7-enterprise",
+      name: "budget-store-v8-zero",
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
         persisted.baseScenarioId ??= persisted.activeScenarioId ?? persisted.scenarios?.[0]?.id;
@@ -254,7 +254,7 @@ export const useBudgetStore = create<BudgetState>()(
         persisted.lastUpdated ??= Date.now();
         return persisted;
       },
-      version: 7,
+      version: 8,
     },
   ),
 );
