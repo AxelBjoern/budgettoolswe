@@ -145,7 +145,7 @@ export const SEED_ASSUMPTIONS: Assumptions = {
     enabled: false,
     originationsPerYear: Array.from({ length: HORIZON_YEARS }, () => 0),
     avgPrincipal: 0,
-    termMonths: 120,
+    termMonths: 0,
     customerAPR: 0,
     originationFeePct: 0,
     costOfCapitalPct: 0,
