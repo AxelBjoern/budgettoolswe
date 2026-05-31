@@ -127,12 +127,12 @@ const HORIZON_YEARS = 10;
 export const SEED_ASSUMPTIONS: Assumptions = {
   startYear: 2026,
   years: HORIZON_YEARS,
-  vatRate: 0.25,
+  vatRate: 0,
   salesAppreciationPct: 0,
-  taxRate: 0.206,
-  depreciationYears: 5,
-  dso: 30,
-  dpo: 30,
+  taxRate: 0,
+  depreciationYears: 0,
+  dso: 0,
+  dpo: 0,
   opening: {
     cash: 0,
     accountsReceivable: 0,
